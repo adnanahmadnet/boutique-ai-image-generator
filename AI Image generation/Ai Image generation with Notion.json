@@ -1,0 +1,1946 @@
+{
+  "name": "Ai Image generation with Notion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Ai-image-generation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1024,
+        832
+      ],
+      "id": "b0dd1e68-d664-407e-be76-d8bf8bcd0f7b",
+      "name": "Webhook",
+      "webhookId": "96e7504d-463d-4443-8b2a-554fcbf43d0a"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-nb",
+                    "leftValue": "={{ $('Webhook').item.json.body.model }}",
+                    "rightValue": "nano_banana",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Nano Banana"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-flux",
+                    "leftValue": "={{ $('Webhook').item.json.body.model }}",
+                    "rightValue": "flux_kontext",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FLUX Kontext"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-gpt",
+                    "leftValue": "={{ $('Webhook').item.json.body.model }}",
+                    "rightValue": "gpt_image_2",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "GPT Image 2"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-topaz",
+                    "leftValue": "={{ $('Webhook').item.json.body.model }}",
+                    "rightValue": "=topaz",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Topaz Upscaler"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1744,
+        800
+      ],
+      "id": "77b28ffe-5897-4aa3-aa3f-709c1fe2c8f6",
+      "name": "Model Router"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/nano-banana-pro/edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{ JSON.stringify($('Webhook').first().json.body.prompt.replace(/\\n/g, ' ').replace(/\\s+/g, ' ').trim()) }},\n  \"num_images\": {{ Math.min(parseInt($('Webhook').first().json.body.num_images) || 1, 4) }},\n  \"aspect_ratio\": {{ JSON.stringify($('Webhook').first().json.body.aspect_ratio || '9:16') }},\n  \"output_format\": {{ JSON.stringify(['jpeg','png'].includes($('Webhook').first().json.body.output_format) ? $('Webhook').first().json.body.output_format : 'png') }},\n  \"image_urls\": {{ JSON.stringify([].concat($('Webhook').first().json.body.image_urls || $('Webhook').first().json.body.image_url || []).filter(Boolean)) }},\n  \"resolution\": {{ JSON.stringify($('Webhook').first().json.body.resolution || '1K') }},\n  \"safety_tolerance\": {{ JSON.stringify(['1','2','3','4','5','6'].includes(String($('Webhook').first().json.body.safety_tolerance)) ? String($('Webhook').first().json.body.safety_tolerance) : '4') }},\n  \"sync_mode\": {{ $('Webhook').first().json.body.sync_mode === true || $('Webhook').first().json.body.sync_mode === 'true' }},\n  \"limit_generations\": {{ $('Webhook').first().json.body.limit_generations === true || $('Webhook').first().json.body.limit_generations === 'true' }},\n  \"enable_web_search\": {{ $('Webhook').first().json.body.enable_web_search === true || $('Webhook').first().json.body.enable_web_search === 'true' }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2576,
+        192
+      ],
+      "id": "41967dbf-b4a1-4195-a677-f615598d56c2",
+      "name": "Nano Banana Pro V2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 120
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2816,
+        192
+      ],
+      "id": "150d1c40-025a-464f-927b-dbef776296fc",
+      "name": "Wait NB",
+      "webhookId": "aa000682-dc66-445f-aecf-22c4c056db97"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3008,
+        192
+      ],
+      "id": "e541e69e-20e8-43f8-a4da-2f7b9071262d",
+      "name": "Grab Images NB",
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "13b1fd6b-b616-4bcd-a831-4033f0b5dc6a",
+              "leftValue": "={{ $json.images[0].url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3168,
+        192
+      ],
+      "id": "b3811879-62c3-4514-a5e6-4719badd2755",
+      "name": "If NB"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/flux-pro/kontext",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{ JSON.stringify($('Webhook').first().json.body.prompt.replace(/\\n/g, ' ').replace(/\\s+/g, ' ').trim()) }},\n  \"image_url\": {{ JSON.stringify($('Webhook').first().json.body.image_urls[0] || $('Webhook').first().json.body.image_url || '') }},\n  \"aspect_ratio\": {{ JSON.stringify($('Webhook').first().json.body.aspect_ratio || '9:16') }},\n  \"num_images\": {{ Math.min(parseInt($('Webhook').first().json.body.num_images) || 1, 4) }},\n  \"output_format\": {{ JSON.stringify(['jpeg','png'].includes($('Webhook').first().json.body.output_format) ? $('Webhook').first().json.body.output_format : 'png') }},\n  \"guidance_scale\": {{ $('Webhook').first().json.body.guidance_scale || 3.5 }},\n  \"safety_tolerance\": {{ JSON.stringify($('Webhook').first().json.body.safety_tolerance || '2') }},\n  \"enhance_prompt\": {{ !!$('Webhook').first().json.body.enhance_prompt }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2608,
+        656
+      ],
+      "id": "b16366f7-f356-4d18-a036-f1c425ed31d9",
+      "name": "FLUX Kontext Pro",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2816,
+        656
+      ],
+      "id": "0e31656a-5b80-4b16-813d-a1bedc545b1d",
+      "name": "Wait Flux",
+      "webhookId": "bb111793-ed77-556b-bfbd-33b5d8167ee8"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3024,
+        656
+      ],
+      "id": "b2434a89-c150-47ee-a0d1-14aba539b6d8",
+      "name": "Grab Images Flux",
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "flux-if-cond",
+              "leftValue": "={{ $json.images[0].url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3184,
+        656
+      ],
+      "id": "57f67c88-496f-46b6-8319-1c95d6bc8f93",
+      "name": "If Flux"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fal.run/openai/gpt-image-2/edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{ JSON.stringify($('Webhook').first().json.body.prompt.replace(/\\n/g, ' ').replace(/\\s+/g, ' ').trim()) }},\n  \"image_urls\": {{ JSON.stringify($('Webhook').first().json.body.image_urls) }},\n  \"image_size\": {{ JSON.stringify($('Webhook').item.json.body.image_size) }},\n  \"num_images\": {{ Number($('Webhook').first().json.body.num_images) || 1 }},\n  \"quality\": {{ JSON.stringify($('Webhook').first().json.body.quality || 'high') }},\n  \"output_format\": {{ JSON.stringify($('Webhook').first().json.body.output_format) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2608,
+        1024
+      ],
+      "id": "49cca3f3-f4ec-4b2c-8569-0257097d1ee3",
+      "name": "GPT Image 2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "gpt-remap",
+              "name": "images",
+              "value": "={{ $json.images }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2864,
+        1024
+      ],
+      "id": "201fb50f-a42e-47b3-b800-459776b1795a",
+      "name": "Normalise GPT Response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fal.run/fal-ai/topaz/upscale/image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2848,
+        1456
+      ],
+      "id": "5b0fb097-3ba2-425e-b723-084bdcb7a4db",
+      "name": "Topaz Upscaler",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Rjpa1idxrgd6MUJH",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "topaz-remap",
+              "name": "images",
+              "value": "={{ [ { \"url\": $json.image.url, \"content_type\": $json.image.content_type, \"file_name\": $json.image.file_name } ] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3168,
+        1456
+      ],
+      "id": "8bddcff1-f484-4845-844d-07afc9d1d55d",
+      "name": "Normalise Topaz Response"
+    },
+    {
+      "parameters": {
+        "content": "## Nano Banana Image Gen Automation\n\nThis automation generates images via 4 models on Fal AI.\n\nSend `model` field in the webhook body to select:\n- `nano_banana` → Nano Banana Pro ($0.15/img)\n- `flux_kontext` → FLUX.1 Kontext Pro ($0.04/img)\n- `gpt_image_2` → GPT Image 2 ($0.01–$0.41/img)\n- `topaz` → Topaz Upscaler (~$0.05/MP)\n\nAll paths → Split Out → Download → Google Drive",
+        "height": 240,
+        "width": 448,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        352
+      ],
+      "id": "03366190-0a03-4b33-aeee-f416696250c6",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Webhook + Model Router\nSend `model` field: `nano_banana` | `flux_kontext` | `gpt_image_2` | `topaz`",
+        "height": 464,
+        "width": 980
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        608
+      ],
+      "id": "40c4c4dc-4401-43d6-9abb-2161c0fdb7bf",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Nano Banana Pro\nAsync queue → poll every 120s\n$0.15/image",
+        "height": 340,
+        "width": 760,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        48
+      ],
+      "id": "3da806ca-496b-46e7-8434-aec385d48c54",
+      "name": "SNote NB"
+    },
+    {
+      "parameters": {
+        "content": "## FLUX.1 Kontext [pro]\nAsync queue → poll every 60s\n$0.04/image",
+        "height": 340,
+        "width": 760,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        480
+      ],
+      "id": "31d23133-9aad-420c-81da-05e9d2c743c6",
+      "name": "SNote Flux"
+    },
+    {
+      "parameters": {
+        "content": "## GPT Image 2\nSynchronous — returns immediately\n$0.01–$0.41/image (by quality + resolution)",
+        "height": 340,
+        "width": 460,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        880
+      ],
+      "id": "889ec2a1-98b3-45f7-a0c2-6257947467ec",
+      "name": "SNote GPT"
+    },
+    {
+      "parameters": {
+        "content": "## Topaz Upscaler\nSynchronous — returns immediately\n~$0.05/MP (scales with output resolution)",
+        "height": 340,
+        "width": 460,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        1280
+      ],
+      "id": "06d61933-5c1b-4f19-ba58-3fe7ac2cc781",
+      "name": "SNote Topaz"
+    },
+    {
+      "parameters": {
+        "content": "## Export + Delivery\nEach lane has its own Split → Download → Upload to Google Drive",
+        "height": 1616,
+        "width": 1172,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        48
+      ],
+      "id": "0a040e57-7cc9-4351-8608-ecde2917591f",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "images",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3424,
+        192
+      ],
+      "id": "088075eb-8bcd-4004-bb3f-d0525245dfcd",
+      "name": "Split Out NB"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3632,
+        192
+      ],
+      "id": "c082cc3c-4ff8-431d-98d0-1a14bc9ab77b",
+      "name": "Download NB"
+    },
+    {
+      "parameters": {
+        "name": "={{ $binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj",
+          "mode": "list",
+          "cachedResultName": "Outfit_folder_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3824,
+        192
+      ],
+      "id": "62ab06e1-9c19-4359-a822-2385e77de967",
+      "name": "Upload NB",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Lg7vWfJLxXY0690n",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "images",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        656
+      ],
+      "id": "5db55bf2-ff6d-49d3-b7c6-924d2e8a1bb0",
+      "name": "Split Out Flux"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3648,
+        656
+      ],
+      "id": "6221f19a-d8e9-426e-a4cd-82462afbbb79",
+      "name": "Download Flux"
+    },
+    {
+      "parameters": {
+        "name": "={{ $binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj",
+          "mode": "list",
+          "cachedResultName": "Outfit_folder_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3840,
+        656
+      ],
+      "id": "54e7822c-f1e2-4e62-9398-661d5459d716",
+      "name": "Upload Flux",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Lg7vWfJLxXY0690n",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "images",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        1024
+      ],
+      "id": "ce7fc862-530d-431d-977d-a6450c60ef29",
+      "name": "Split Out GPT"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3648,
+        1024
+      ],
+      "id": "2a720858-c68d-4aad-a5e2-a8efc3bf43ab",
+      "name": "Download GPT"
+    },
+    {
+      "parameters": {
+        "name": "={{ $binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj",
+          "mode": "list",
+          "cachedResultName": "Outfit_folder_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3872,
+        1024
+      ],
+      "id": "09b07b41-40c0-41f8-a695-e03a75766408",
+      "name": "Upload GPT",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Lg7vWfJLxXY0690n",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "images",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3456,
+        1456
+      ],
+      "id": "452e5b1c-f23c-49d0-baba-83f989caf1a3",
+      "name": "Split Out Topaz"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3664,
+        1456
+      ],
+      "id": "4be27e7a-1bc6-4388-84c6-91b6dc609b8c",
+      "name": "Download Topaz"
+    },
+    {
+      "parameters": {
+        "name": "={{ $binary.data.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj",
+          "mode": "list",
+          "cachedResultName": "Outfit_folder_n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/16V5YPB6T4GyAIC6B5Fmq1eST8ys2w7Yj"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3856,
+        1456
+      ],
+      "id": "82042e5f-b477-41d9-a349-4e4db146b51a",
+      "name": "Upload Topaz",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Lg7vWfJLxXY0690n",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body;\nconst model = body.topaz_model || 'Standard V2';\n\n// Helper: true only if the field was actually sent (not missing/empty)\nconst has = (v) => v !== undefined && v !== null && v !== '';\n\n// Base payload — always sent (these always have a value from the UI)\nconst payload = {\n  image_url:         body.image_url || body.image_urls?.[0] || '',\n  model:             model,\n  upscale_factor:    Math.min(Math.max(parseFloat(body.upscale_factor) || 2, 1), 4),\n  output_format:     ['jpeg','png'].includes(body.output_format) ? body.output_format : 'jpeg',\n  subject_detection: ['All','Foreground','Background'].includes(body.subject_detection) ? body.subject_detection : 'All',\n  face_enhancement:  !(body.face_enhancement === false || body.face_enhancement === 'false'),\n};\n\nif (has(body.crop_to_fill)) payload.crop_to_fill = body.crop_to_fill === true || body.crop_to_fill === 'true';\n\n// Face enhancement fine controls — only if actually provided\nif (has(body.face_enhancement_strength))   payload.face_enhancement_strength   = parseFloat(body.face_enhancement_strength);\nif (has(body.face_enhancement_creativity)) payload.face_enhancement_creativity = parseFloat(body.face_enhancement_creativity);\n\n// Sharpening controls — Standard V2, High Fidelity V2, Low Resolution V2, CGI, Text Refine, Redefine\nconst sharpenModels = ['Standard V2','High Fidelity V2','Low Resolution V2','CGI','Text Refine','Redefine'];\nif (sharpenModels.includes(model)) {\n  if (has(body.sharpen))         payload.sharpen         = parseFloat(body.sharpen);\n  if (has(body.denoise))         payload.denoise         = parseFloat(body.denoise);\n  if (has(body.fix_compression)) payload.fix_compression = parseFloat(body.fix_compression);\n}\n\n// Text Refine only\nif (model === 'Text Refine') {\n  if (has(body.strength)) payload.strength = parseFloat(body.strength);\n}\n\n// Redefine only\nif (model === 'Redefine' || model === 'Wonder 3') {\n  if (has(body.creativity)) payload.creativity = parseInt(body.creativity, 10);\n  if (has(body.texture))    payload.texture    = parseInt(body.texture, 10);\n  const prompt = (body.prompt || '').trim().slice(0, 1024);\n  if (prompt) {\n    payload.prompt = prompt;\n  } else {\n    payload.autoprompt = true;\n  }\n}\n\n// Recovery V2 only\nif (model === 'Recovery V2') {\n  if (has(body.detail)) payload.detail = parseFloat(body.detail);\n}\n\nreturn [{ json: payload }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        1456
+      ],
+      "id": "fe2393c7-0679-49a4-996b-9d9800bedc6c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\n// Build common payload that EVERY model sends\nreturn [{\n  json: {\n    // Pass through everything for the router\n    ...body,\n    \n    // Normalized common fields for Notion Create\n    notion_payload: {\n      Name:         body.model + ' · ' + new Date().toLocaleString(),\n      Model:        body.model || '',\n      Prompt:       (body.prompt || '').slice(0, 2000),\n      OutputFormat: body.output_format || '',\n      NumImages:    Number(body.num_images) || 1,\n      ImageURLs:    Array.isArray(body.image_urls) \n                      ? body.image_urls.join('\\n') \n                      : (body.image_urls || ''),\n      WebhookURL:   body.webhookUrl || '',\n      Status:       'Processing',\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        832
+      ],
+      "id": "4d0d72be-49ad-4a88-b672-55f3fb516fe9",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Extract Upscalar Record Key').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Output Image URLs|rich_text",
+              "richText": true,
+              "text": {
+                "text": [
+                  {
+                    "text": "={{ $json.data.map(item => item.webViewLink).join('\\n') }}",
+                    "annotationUi": {}
+                  }
+                ]
+              }
+            },
+            {
+              "key": "Topaz Model|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.topaz_model }}"
+            },
+            {
+              "key": "Upscale Factor|number",
+              "numberValue": "={{ $('Code in JavaScript').item.json.upscale_factor }}"
+            },
+            {
+              "key": "Face Enhancement|rich_text",
+              "textContent": "={{ String($('Webhook').item.json.body.face_enhancement) }}"
+            },
+            {
+              "key": "Status|rich_text",
+              "textContent": "Done"
+            },
+            {
+              "key": "Finished At|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4336,
+        1456
+      ],
+      "id": "79ab0de1-0e3e-4414-9a8f-b1b06c08784f",
+      "name": "Update Topaz page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Extract GPT Record Key').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Finished At|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Status|rich_text",
+              "textContent": "Done"
+            },
+            {
+              "key": "Output Image URLs|rich_text",
+              "richText": true,
+              "text": {
+                "text": [
+                  {
+                    "text": "={{ $json.data.map(item => item.webViewLink).join('\\n') }}",
+                    "annotationUi": {}
+                  }
+                ]
+              }
+            },
+            {
+              "key": "GPT Quality|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.quality }}"
+            },
+            {
+              "key": "Image Size|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.image_size }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4336,
+        1024
+      ],
+      "id": "b545346f-f595-4dc1-a4ab-cba8390f71e9",
+      "name": "Update GPT page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Extract Nano Banana Record Key').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Finished At|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Status|rich_text",
+              "textContent": "Done"
+            },
+            {
+              "key": "Output Image URLs|rich_text",
+              "richText": true,
+              "text": {
+                "text": [
+                  {
+                    "text": "={{ $json.data.map(item => item.webViewLink).join('\\n') }}",
+                    "annotationUi": {}
+                  }
+                ]
+              }
+            },
+            {
+              "key": "Aspect Ratio|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.aspect_ratio }}"
+            },
+            {
+              "key": "Resolution|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.resolution }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4288,
+        192
+      ],
+      "id": "05e781f0-4d86-482f-b6c0-e97ae7a5bbdc",
+      "name": "Update NanoBanana page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Extract Flux Record Key').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Finished At|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Status|rich_text",
+              "textContent": "Done"
+            },
+            {
+              "key": "Output Image URLs|rich_text",
+              "richText": true,
+              "text": {
+                "text": [
+                  {
+                    "text": "={{ $json.data.map(item => item.webViewLink).join('\\n') }}",
+                    "annotationUi": {}
+                  }
+                ]
+              }
+            },
+            {
+              "key": "Aspect Ratio|rich_text",
+              "textContent": "={{ $('Webhook').item.json.body.aspect_ratio }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        4304,
+        656
+      ],
+      "id": "45d3bffa-800d-4441-be53-082496696315",
+      "name": "Update Flux page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "38b13522-26ab-800a-b148-fd0355ccde5b",
+          "mode": "list",
+          "cachedResultName": "AI Image Genaration Logs",
+          "cachedResultUrl": "https://app.notion.com/p/38b1352226ab800ab148fd0355ccde5b"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Model|title",
+              "title": "={{ $json.model }}"
+            },
+            {
+              "key": "Prompt|rich_text",
+              "textContent": "={{ ($json.prompt || '').replace(/\\n/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 2000) }}"
+            },
+            {
+              "key": "Output Format|rich_text",
+              "textContent": "={{ $json.notion_payload.OutputFormat }}"
+            },
+            {
+              "key": "Num Images|number",
+              "numberValue": "={{ $json.notion_payload.NumImages }}"
+            },
+            {
+              "key": "Image URLs|rich_text",
+              "textContent": "={{ [].concat($json.image_url || $json.image_urls || []).filter(Boolean).join('\\n') }}"
+            },
+            {
+              "key": "Status|rich_text",
+              "textContent": "={{ $json.notion_payload.Status }}"
+            },
+            {
+              "key": "Launched At|date",
+              "date": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        832
+      ],
+      "id": "a81e42be-fdaf-4da9-8040-82f073c7e6fd",
+      "name": "Create Notion Record",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    notion_page_id: $input.first().json.id  // save Notion page ID\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        544
+      ],
+      "id": "ccceb913-41dc-4470-bfc5-0ebc2ea79877",
+      "name": "Extract Nano Banana Record Key"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    notion_page_id: $input.first().json.id  // save Notion page ID\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        752
+      ],
+      "id": "0b7b04b3-a8cc-43d7-9f9c-46b6cca11a81",
+      "name": "Extract Flux Record Key"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    notion_page_id: $input.first().json.id  // save Notion page ID\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        960
+      ],
+      "id": "de990907-4b85-45d0-b5cb-3416148ce8cd",
+      "name": "Extract GPT Record Key"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    notion_page_id: $input.first().json.id  // save Notion page ID\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        1152
+      ],
+      "id": "3182b69f-ec39-41a2-838b-4d1b1c180456",
+      "name": "Extract Upscalar Record Key"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"processing\", \n  \"recordId\": \"{{ $json.id }}\", \n  \"notionUrl\": \"{{ $json.url }}\"\n} ",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1760,
+        640
+      ],
+      "id": "8948512c-a817-480d-903e-77bf98cbf411",
+      "name": "Respond - Acknowledge"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "get",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.query.recordId }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        1312
+      ],
+      "id": "703b6527-ec2e-48fd-962d-63666626b209",
+      "name": "Get a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "Ai-image-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        976,
+        1312
+      ],
+      "id": "4d767242-6eb8-4625-bf6a-37bb6a3e0b2f",
+      "name": "Ai-image-status",
+      "webhookId": "7814d133-045a-4fa7-b797-d1688976400a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dfd6ec0b-2f29-4cd2-96c8-62a6a6fbd758",
+              "leftValue": "={{ $json.property_status }}",
+              "rightValue": "Done",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "446f0e32-e901-4902-be36-eba9b969eaa0",
+              "leftValue": "={{ $json.property_status }}",
+              "rightValue": "Error",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        1312
+      ],
+      "id": "a74289bc-9e4c-4822-8d25-336bddb43261",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "get",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Get a database page').item.json.id }}",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        1296
+      ],
+      "id": "92344b60-939a-4522-b1b5-8719e42a686d",
+      "name": "Get a database page1",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"URL\": {{ JSON.stringify($json.property_output_image_ur_ls) }},\n  \"Status\": {{ JSON.stringify($json.property_status) }}\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1856,
+        1296
+      ],
+      "id": "ffe7d0e5-8c81-41b8-8d7b-315e260ca432",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "webViewLink",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4048,
+        656
+      ],
+      "id": "896b8ac7-730d-49c0-bf4d-7821c75b19d4",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "webViewLink",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4048,
+        192
+      ],
+      "id": "084941cd-6805-45e7-9ccd-d1752380e385",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "webViewLink",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4080,
+        1024
+      ],
+      "id": "a9fa1dc5-42c3-4ca6-830d-24309e62b274",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "webViewLink",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4112,
+        1456
+      ],
+      "id": "3e9a5fdd-5f33-41e2-b1a6-516aa505053f",
+      "name": "Aggregate3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model Router": {
+      "main": [
+        [
+          {
+            "node": "Extract Nano Banana Record Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Flux Record Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract GPT Record Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Upscalar Record Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nano Banana Pro V2": {
+      "main": [
+        [
+          {
+            "node": "Wait NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait NB": {
+      "main": [
+        [
+          {
+            "node": "Grab Images NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grab Images NB": {
+      "main": [
+        [
+          {
+            "node": "If NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If NB": {
+      "main": [
+        [
+          {
+            "node": "Split Out NB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out NB": {
+      "main": [
+        [
+          {
+            "node": "Download NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download NB": {
+      "main": [
+        [
+          {
+            "node": "Upload NB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FLUX Kontext Pro": {
+      "main": [
+        [
+          {
+            "node": "Wait Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Flux": {
+      "main": [
+        [
+          {
+            "node": "Grab Images Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grab Images Flux": {
+      "main": [
+        [
+          {
+            "node": "If Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Flux": {
+      "main": [
+        [
+          {
+            "node": "Split Out Flux",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Flux": {
+      "main": [
+        [
+          {
+            "node": "Download Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Flux": {
+      "main": [
+        [
+          {
+            "node": "Upload Flux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Image 2": {
+      "main": [
+        [
+          {
+            "node": "Normalise GPT Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise GPT Response": {
+      "main": [
+        [
+          {
+            "node": "Split Out GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out GPT": {
+      "main": [
+        [
+          {
+            "node": "Download GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download GPT": {
+      "main": [
+        [
+          {
+            "node": "Upload GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Topaz Upscaler": {
+      "main": [
+        [
+          {
+            "node": "Normalise Topaz Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise Topaz Response": {
+      "main": [
+        [
+          {
+            "node": "Split Out Topaz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Topaz": {
+      "main": [
+        [
+          {
+            "node": "Download Topaz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Topaz": {
+      "main": [
+        [
+          {
+            "node": "Upload Topaz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload NB": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Flux": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload GPT": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Topaz": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Topaz Upscaler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Create Notion Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Notion Record": {
+      "main": [
+        [
+          {
+            "node": "Model Router",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond - Acknowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Nano Banana Record Key": {
+      "main": [
+        [
+          {
+            "node": "Nano Banana Pro V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Flux Record Key": {
+      "main": [
+        [
+          {
+            "node": "FLUX Kontext Pro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract GPT Record Key": {
+      "main": [
+        [
+          {
+            "node": "GPT Image 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Upscalar Record Key": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update NanoBanana page": {
+      "main": [
+        []
+      ]
+    },
+    "Update Flux page": {
+      "main": [
+        []
+      ]
+    },
+    "Update GPT page": {
+      "main": [
+        []
+      ]
+    },
+    "Update Topaz page": {
+      "main": [
+        []
+      ]
+    },
+    "Respond - Acknowledge": {
+      "main": [
+        []
+      ]
+    },
+    "Ai-image-status": {
+      "main": [
+        [
+          {
+            "node": "Get a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a database page": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get a database page1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a database page1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Update Flux page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Update NanoBanana page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Update GPT page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Update Topaz page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "24aHgypCVUgRyPHO",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "30c24fb5-ecd9-4ecd-b8f8-f9effe507d0d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9e877aec2d0f2218f0192152338c3ba0fb7f26f21acd11f1971a71d985c6459f"
+  },
+  "nodeGroups": [],
+  "id": "wNfMp0MkqPLK3AMH",
+  "tags": []
+}

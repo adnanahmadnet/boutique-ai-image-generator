@@ -1,0 +1,140 @@
+{
+  "name": "AI image generation Error Logs",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "546cdaa2-23d1-46f3-9b44-3b611be4e7d1",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "38b13522-26ab-800a-b148-fd0355ccde5b",
+          "mode": "list",
+          "cachedResultName": "AI Image Genaration Logs",
+          "cachedResultUrl": "https://app.notion.com/p/38b1352226ab800ab148fd0355ccde5b"
+        },
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status|rich_text",
+              "condition": "equals",
+              "richTextValue": "Processing"
+            },
+            {
+              "key": "Finished At|date",
+              "condition": "is_empty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a6a8db4c-424a-40e1-8719-4bce6c9685a0",
+      "name": "Get many database pages",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}",
+          "__regex": "^([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|rich_text",
+              "textContent": "Error"
+            },
+            {
+              "key": "Finished At|date",
+              "date": "={{ $now }}"
+            },
+            {
+              "key": "Error Detail|rich_text",
+              "textContent": "=Error Message      → {{ $('Error Trigger').item.json.execution.error.message }}\nError Description  → {{ $('Error Trigger').item.json.execution.error.stack.slice(0, 1500) }}\nFailed Node        → {{ $('Error Trigger').item.json.execution.lastNodeExecuted }}\n\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ca295a4c-51cd-41c7-a702-90a9d1df6a4f",
+      "name": "Update a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "rwTVykRC6PCJcLzZ",
+          "name": "Notion account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "Update a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "654537c6-1756-472b-beb8-b844ed039103",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9e877aec2d0f2218f0192152338c3ba0fb7f26f21acd11f1971a71d985c6459f"
+  },
+  "nodeGroups": [],
+  "id": "24aHgypCVUgRyPHO",
+  "tags": []
+}

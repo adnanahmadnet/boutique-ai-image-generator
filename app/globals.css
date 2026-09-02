@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #000000;
+  --color-surface: #0f0f0f;
+  --color-surface-2: #1a1a1a;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.22);
+
+  --color-accent: #f5c842;
+  --color-accent-dim: rgba(245, 200, 66, 0.13);
+  --color-accent-foreground: #000000;
+
+  --color-text: #ffffff;
+  --color-text-muted: #a0a0a0;
+  --color-text-dim: #666666;
+
+  --color-success: #4ade80;
+  --color-success-dim: rgba(74, 222, 128, 0.1);
+  --color-danger: #f87171;
+  --color-danger-dim: rgba(248, 113, 113, 0.1);
+
+  --radius-default: 10px;
+  --radius-lg: 14px;
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-border-hover: var(--color-border-hover);
+
+  --color-accent: var(--color-accent);
+  --color-accent-dim: var(--color-accent-dim);
+  --color-accent-foreground: var(--color-accent-foreground);
+
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-dim: var(--color-text-dim);
+
+  --color-success: var(--color-success);
+  --color-success-dim: var(--color-success-dim);
+  --color-danger: var(--color-danger);
+  --color-danger-dim: var(--color-danger-dim);
+
+  --radius-default: var(--radius-default);
+  --radius-lg: var(--radius-lg);
+
+  --font-heading: var(--font-syne);
+  --font-body: var(--font-dm-sans);
+  --font-mono: var(--font-dm-mono);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body), sans-serif;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

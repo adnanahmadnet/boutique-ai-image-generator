@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isAdminEmail } from "@/lib/admin";
+import { getDisplayName } from "@/lib/user-display";
 import DashboardNav from "@/components/dashboard/DashboardNav";
 import Container from "@/components/Container";
 
@@ -32,9 +34,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
+  // Admins belong in /admin, not the buyer dashboard — send them there
+  // even if they land on /dashboard directly (bookmark, stale link, etc.).
+  if (isAdminEmail(user.email)) {
+    redirect("/admin");
+  }
+
+  // RLS-scoped (contact_messages_select_own) — only ever counts this
+  // user's own replied-but-unseen messages.
+  const { count: unseenReplyCount } = await supabase
+    .from("contact_messages")
+    .select("id", { count: "exact", head: true })
+    .not("reply", "is", null)
+    .is("reply_seen_at", null);
+
   return (
     <div className="min-h-screen">
-      <DashboardNav email={user.email ?? ""} />
+      <DashboardNav displayName={getDisplayName(user)} unseenReplyCount={unseenReplyCount ?? 0} />
       <Container className="py-10">{children}</Container>
     </div>
   );

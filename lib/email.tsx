@@ -94,3 +94,43 @@ export async function sendContactNotificationEmail(
     return { sent: false, reason: "unexpected-error" };
   }
 }
+
+export interface ContactReplyProps {
+  to: string;
+  subject?: string;
+  originalMessage: string;
+  reply: string;
+}
+
+// Notifies the sender that an admin replied. The reply is also stored on the
+// contact_messages row itself (visible in their dashboard), so this is a
+// courtesy notification, not the only place the reply lives — no-ops
+// quietly when unconfigured.
+export async function sendContactReplyEmail(props: ContactReplyProps): Promise<SendEmailResult> {
+  const resend = getResendClient();
+  const from = process.env.RESEND_FROM_EMAIL;
+
+  if (!resend || !from) {
+    console.warn(`[email] Contact reply email skipped — not configured. To: ${props.to}`);
+    return { sent: false, reason: "not-configured" };
+  }
+
+  try {
+    const { error } = await resend.emails.send({
+      from,
+      to: props.to,
+      subject: `Re: ${props.subject || "Your message"}`,
+      text: `${props.reply}\n\n---\nYour original message:\n${props.originalMessage}`,
+    });
+
+    if (error) {
+      console.error("[email] Resend rejected the contact reply email", error);
+      return { sent: false, reason: "provider-error" };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    console.error("[email] Failed to send contact reply email", error);
+    return { sent: false, reason: "unexpected-error" };
+  }
+}

@@ -5,8 +5,9 @@ import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import { SITE } from "@/data/site";
 import { HERO_PAIR } from "@/data/gallery";
 
-export default function Hero() {
+export default function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
   const { hero } = SITE;
+  const ctaHref = isLoggedIn ? hero.ctaHref : "/login";
 
   return (
     <section className="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28">
@@ -27,7 +28,7 @@ export default function Hero() {
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Link
-              href={hero.ctaHref}
+              href={ctaHref}
               className="inline-flex items-center gap-2 rounded-default bg-accent px-6 py-3.5 font-heading text-sm font-bold text-accent-foreground transition-opacity hover:opacity-90"
             >
               {hero.ctaLabel}

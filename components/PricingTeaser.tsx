@@ -5,7 +5,9 @@ import SectionHeading from "@/components/SectionHeading";
 import { SITE } from "@/data/site";
 import { PRICING } from "@/data/pricing";
 
-export default function PricingTeaser() {
+export default function PricingTeaser({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const ctaHref = isLoggedIn ? "/pricing" : "/login";
+
   return (
     <section className="border-y border-border bg-surface/40 py-20 sm:py-28">
       <Container className="flex flex-col items-center gap-10">
@@ -36,7 +38,7 @@ export default function PricingTeaser() {
             ))}
           </ul>
           <Link
-            href="/pricing"
+            href={ctaHref}
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-default bg-accent px-6 py-3.5 font-heading text-sm font-bold text-accent-foreground transition-opacity hover:opacity-90"
           >
             Get Access

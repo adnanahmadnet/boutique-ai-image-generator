@@ -16,7 +16,7 @@ export default function SectionHeading({
       <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-accent">
         {eyebrow}
       </span>
-      <h2 className="text-balance font-heading text-3xl font-bold leading-tight text-text sm:text-4xl">
+      <h2 className="text-balance font-heading text-3xl font-bold leading-[1.35] text-text sm:text-4xl">
         {heading}
       </h2>
       {subheading ? (

@@ -51,7 +51,7 @@ export default function BeforeAfterSlider({
   return (
     <div
       ref={containerRef}
-      className="group relative aspect-[4/5] w-full max-w-md touch-none overflow-hidden rounded-lg border border-border select-none sm:aspect-[3/4]"
+      className="group relative aspect-[893/1600] w-full max-w-md touch-none overflow-hidden rounded-lg border border-border select-none"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

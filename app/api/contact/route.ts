@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendContactNotificationEmail } from "@/lib/email";
+import { getDisplayName } from "@/lib/user-display";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,17 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const name = body.name?.trim();
-  const email = body.email?.trim();
   const subject = body.subject?.trim();
   const message = body.message?.trim();
-
-  if (!name || !email || !EMAIL_RE.test(email) || !message) {
-    return NextResponse.json(
-      { error: "Name, a valid email, and a message are required." },
-      { status: 400 }
-    );
-  }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
@@ -44,9 +37,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // A signed-in sender's identity is authoritative (and lets the admin see
+  // exactly who asked) — otherwise fall back to the freely-typed name/email
+  // from the public contact form.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const name = user ? getDisplayName(user) : body.name?.trim();
+  const email = user?.email ?? body.email?.trim();
+
+  if (!name || !email || !EMAIL_RE.test(email) || !message) {
+    return NextResponse.json(
+      { error: "Name, a valid email, and a message are required." },
+      { status: 400 }
+    );
+  }
+
   try {
     const admin = createAdminClient();
     const { error } = await admin.from("contact_messages").insert({
+      buyer_id: user?.id ?? null,
       name,
       email,
       subject: subject || null,

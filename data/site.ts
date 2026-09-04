@@ -20,7 +20,7 @@ export const SITE = {
   },
   howItWorks: {
     eyebrow: "Architecture",
-    heading: "One webhook, four models, zero babysitting",
+    heading: "Two webhook, four models, zero babysitting",
     subheading:
       "Built on n8n so the whole pipeline is inspectable, forkable, and yours to run — not a black-box SaaS.",
   },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPayPalOrder } from "@/lib/paypal";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { PRICING } from "@/data/pricing";
@@ -30,8 +31,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const email = body.email?.trim();
   const boutiqueName = body.boutiqueName?.trim();
+
+  // A signed-in buyer's own email is authoritative — attach buyer_id directly
+  // so this order never needs the guest-checkout claim step on next login.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const email = user?.email ?? body.email?.trim();
 
   if (!email || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "A valid email address is required." }, { status: 400 });
@@ -43,6 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: orderRow, error: insertError } = await admin
       .from("orders")
       .insert({
+        buyer_id: user?.id ?? null,
         buyer_email: email,
         boutique_name: boutiqueName || null,
         amount: PRICING.amount,

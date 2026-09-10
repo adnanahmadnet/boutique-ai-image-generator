@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { isAdminEmail } from "@/lib/admin";
+import { isDatabaseConfigured, queryOne } from "@/lib/db";
+import { getCurrentAdmin } from "@/lib/get-current-admin";
 import AdminNav from "@/components/admin/AdminNav";
 import Container from "@/components/Container";
 
@@ -10,40 +8,34 @@ import Container from "@/components/Container";
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <p className="max-w-sm text-center text-[13.5px] text-text-muted">
-          Admin isn&apos;t configured yet — Supabase credentials are missing.
+          Admin isn&apos;t configured yet — the database isn&apos;t reachable.
         </p>
       </div>
     );
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Checks the admin session (public.admin_sessions), which is a separate
+  // table and cookie from a buyer's session — see
+  // db/migrations/0003_separate_admin_table.sql. Login is shared, but the
+  // session it issues is not: a logged-in buyer holds no admin session and
+  // is sent back to /login, same as an anonymous visitor.
+  const admin = await getCurrentAdmin();
 
-  if (!user) {
+  if (!admin) {
     redirect("/login?redirectTo=/admin");
   }
 
-  // Not an admin: quietly send them to their own dashboard rather than
-  // revealing that an /admin area exists via an explicit "forbidden" page.
-  if (!isAdminEmail(user.email)) {
-    redirect("/dashboard/downloads");
-  }
-
-  const admin = createAdminClient();
-  const { count: newMessageCount } = await admin
-    .from("contact_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "new");
+  const newMessages = await queryOne<{ count: string }>(
+    `select count(*) as count from public.contact_messages where status = 'new'`
+  );
 
   return (
     <div className="min-h-screen">
-      <AdminNav newMessageCount={newMessageCount ?? 0} />
+      <AdminNav newMessageCount={Number(newMessages?.count ?? 0)} />
       <Container className="py-10">{children}</Container>
     </div>
   );

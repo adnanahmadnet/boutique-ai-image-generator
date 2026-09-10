@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured, query, queryOne } from "@/lib/db";
 
 export interface RateLimitOptions {
   windowSeconds: number;
@@ -12,8 +11,8 @@ export interface RateLimitResult {
   remaining: number;
 }
 
-// Windowed counter backed by public.rate_limit_hits (see supabase/migrations).
-// Fails open (allows the request) if Supabase isn't configured or the
+// Windowed counter backed by public.rate_limit_hits (see db/migrations).
+// Fails open (allows the request) if the database isn't configured or the
 // count/insert query errors — a rate-limiter outage should never take down
 // the endpoints it protects.
 export async function checkRateLimit(
@@ -24,38 +23,25 @@ export async function checkRateLimit(
     return { allowed: true, remaining: options.maxHits };
   }
 
-  if (!isSupabaseConfigured()) {
-    console.warn("[rate-limit] Supabase not configured — rate limiting disabled.");
+  if (!isDatabaseConfigured()) {
+    console.warn("[rate-limit] Database not configured — rate limiting disabled.");
     return { allowed: true, remaining: options.maxHits };
   }
 
   try {
-    const admin = createAdminClient();
     const windowStart = new Date(Date.now() - options.windowSeconds * 1000).toISOString();
 
-    const { count, error } = await admin
-      .from("rate_limit_hits")
-      .select("id", { count: "exact", head: true })
-      .eq("bucket_key", bucketKey)
-      .gte("created_at", windowStart);
+    const row = await queryOne<{ count: string }>(
+      `select count(*) as count from public.rate_limit_hits where bucket_key = $1 and created_at >= $2`,
+      [bucketKey, windowStart]
+    );
 
-    if (error) {
-      console.error("[rate-limit] count query failed", error);
-      return { allowed: true, remaining: options.maxHits };
-    }
-
-    const hits = count ?? 0;
+    const hits = Number(row?.count ?? 0);
     if (hits >= options.maxHits) {
       return { allowed: false, remaining: 0 };
     }
 
-    const { error: insertError } = await admin
-      .from("rate_limit_hits")
-      .insert({ bucket_key: bucketKey });
-
-    if (insertError) {
-      console.error("[rate-limit] insert failed", insertError);
-    }
+    await query(`insert into public.rate_limit_hits (bucket_key) values ($1)`, [bucketKey]);
 
     return { allowed: true, remaining: options.maxHits - hits - 1 };
   } catch (error) {

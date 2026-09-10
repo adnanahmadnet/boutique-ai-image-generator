@@ -1,6 +1,5 @@
 import { getCurrentUser } from "@/lib/get-current-user";
 import { getDisplayName } from "@/lib/user-display";
-import { isAdminEmail } from "@/lib/admin";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -11,10 +10,11 @@ import Footer from "@/components/Footer";
 export const dynamic = "force-dynamic";
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
+  // getCurrentUser() only ever resolves a buyer session — an admin session
+  // lives on a separate cookie (see lib/get-current-admin.ts) and is never
+  // reflected in the buyer-facing header.
   const user = await getCurrentUser();
-  // Admins never show identifying text in the site-wide header — the header
-  // just gives them a Dashboard/Logout affordance, same as everywhere else.
-  const displayName = user && !isAdminEmail(user.email) ? getDisplayName(user) : null;
+  const displayName = user ? getDisplayName(user) : null;
   const isLoggedIn = Boolean(user);
 
   return (

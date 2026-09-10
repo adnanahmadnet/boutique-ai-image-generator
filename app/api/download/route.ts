@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyDownloadToken, markGrantConsumed } from "@/lib/download-token";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const DELIVERABLE_PATH = path.join(
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing token." }, { status: 400 });
   }
 
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Downloads aren't configured yet." }, { status: 503 });
   }
 

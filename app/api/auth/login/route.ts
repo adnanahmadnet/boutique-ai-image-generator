@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { isDatabaseConfigured, query, queryOne } from "@/lib/db";
+import { verifyPassword } from "@/lib/auth/password";
+import { createSession } from "@/lib/auth/session";
+import { createAdminSession } from "@/lib/auth/admin-session";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { claimGuestOrders } from "@/lib/auth-claim";
-import { isAdminEmail } from "@/lib/admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Login isn't configured yet." }, { status: 503 });
   }
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   let password: string | undefined;
   try {
     const body = await request.json();
-    email = body.email?.trim();
+    email = body.email?.trim().toLowerCase();
     password = body.password;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const [ipLimit, emailLimit] = await Promise.all([
     checkRateLimit(`login-ip:${ip}`, { windowSeconds: 600, maxHits: 20 }),
-    checkRateLimit(`login-email:${email.toLowerCase()}`, { windowSeconds: 600, maxHits: 8 }),
+    checkRateLimit(`login-email:${email}`, { windowSeconds: 600, maxHits: 8 }),
   ]);
 
   if (!ipLimit.allowed || !emailLimit.allowed) {
@@ -41,20 +42,44 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  // One form, two identities. The admin table is checked first, and a match
+  // issues an admin session (a different table and a different cookie from a
+  // buyer session — see lib/auth/admin-session.ts). This is only a shared
+  // *entry point*: signup still cannot create an admin, and an admin row can
+  // only be created out-of-band by db/seed-admin.mjs.
+  const admin = await queryOne<{ id: string; password_hash: string }>(
+    `select id, password_hash from public.admins where email = $1`,
+    [email]
+  );
 
-  if (error) {
+  if (admin) {
+    if (!(await verifyPassword(password, admin.password_hash))) {
+      return NextResponse.json({ error: "Incorrect email or password." }, { status: 401 });
+    }
+
+    await createAdminSession(admin.id);
+    await query(`update public.admins set last_sign_in_at = now() where id = $1`, [admin.id]);
+
+    return NextResponse.json({ ok: true, isAdmin: true });
+  }
+
+  const user = await queryOne<{ id: string; password_hash: string }>(
+    `select id, password_hash from public.users where email = $1`,
+    [email]
+  );
+
+  if (!user || !(await verifyPassword(password, user.password_hash))) {
     return NextResponse.json({ error: "Incorrect email or password." }, { status: 401 });
   }
 
-  if (data.user) {
-    try {
-      await claimGuestOrders(data.user.id, email);
-    } catch (claimError) {
-      console.error("[auth/login] failed to claim guest orders", claimError);
-    }
+  await createSession(user.id);
+  await query(`update public.users set last_sign_in_at = now() where id = $1`, [user.id]);
+
+  try {
+    await claimGuestOrders(user.id, email);
+  } catch (claimError) {
+    console.error("[auth/login] failed to claim guest orders", claimError);
   }
 
-  return NextResponse.json({ ok: true, isAdmin: isAdminEmail(email) });
+  return NextResponse.json({ ok: true, isAdmin: false });
 }

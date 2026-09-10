@@ -1,5 +1,5 @@
 import { IconCircleCheck, IconCircleX, IconClock, IconReceiptRefund } from "@tabler/icons-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +34,19 @@ function StatusBadge({ status }: { status: Status }) {
 }
 
 export default async function AdminOrdersPage() {
-  const admin = createAdminClient();
-  const { data: orders } = await admin
-    .from("orders")
-    .select("id, buyer_email, boutique_name, amount, currency, status, created_at")
-    .order("created_at", { ascending: false });
-
-  const rows = orders ?? [];
+  const rows = await query<{
+    id: string;
+    buyer_email: string;
+    boutique_name: string | null;
+    amount: string;
+    currency: string;
+    status: Status;
+    created_at: string;
+  }>(
+    `select id, buyer_email, boutique_name, amount, currency, status, created_at
+     from public.orders
+     order by created_at desc`
+  );
 
   return (
     <div className="flex flex-col gap-6">

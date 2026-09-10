@@ -1,20 +1,21 @@
 import { IconUsers, IconReceipt2, IconCoin, IconMailbox } from "@tabler/icons-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query, queryOne } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
-  const admin = createAdminClient();
-
-  const [usersResult, ordersResult, messagesResult] = await Promise.all([
-    admin.auth.admin.listUsers({ perPage: 1000 }),
-    admin.from("orders").select("status, amount, currency"),
-    admin.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "new"),
+  const [usersResult, orders, messagesResult] = await Promise.all([
+    queryOne<{ count: string }>(`select count(*) as count from public.users`),
+    query<{ status: string; amount: string; currency: string }>(
+      `select status, amount, currency from public.orders`
+    ),
+    queryOne<{ count: string }>(
+      `select count(*) as count from public.contact_messages where status = 'new'`
+    ),
   ]);
 
-  const totalUsers = usersResult.data?.users.length ?? 0;
-  const allOrders = ordersResult.data ?? [];
-  const completedOrders = allOrders.filter((order) => order.status === "completed");
+  const totalUsers = Number(usersResult?.count ?? 0);
+  const completedOrders = orders.filter((order) => order.status === "completed");
   const totalRevenue = completedOrders.reduce((sum, order) => sum + Number(order.amount), 0);
   const currency = completedOrders[0]?.currency ?? "USD";
 
@@ -22,7 +23,7 @@ export default async function AdminOverviewPage() {
     { label: "Total signups", value: String(totalUsers), icon: IconUsers },
     { label: "Completed orders", value: String(completedOrders.length), icon: IconReceipt2 },
     { label: "Total revenue", value: `${currency} ${totalRevenue.toFixed(2)}`, icon: IconCoin },
-    { label: "New messages", value: String(messagesResult.count ?? 0), icon: IconMailbox },
+    { label: "New messages", value: String(messagesResult?.count ?? 0), icon: IconMailbox },
   ];
 
   return (

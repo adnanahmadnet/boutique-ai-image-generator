@@ -9,8 +9,9 @@ import {
   IconLoader2,
   IconAlertTriangle,
   IconCheck,
+  IconEye,
+  IconEyeOff,
 } from "@tabler/icons-react";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 type FormState =
   | { status: "idle" }
@@ -21,23 +22,26 @@ type FormState =
 export default function PasswordAuthForm({
   mode,
   redirectTo = "/",
+  isConfigured = true,
 }: {
   mode: "login" | "signup";
   redirectTo?: string;
+  isConfigured?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [state, setState] = useState<FormState>({ status: "idle" });
 
-  if (!isSupabaseConfigured()) {
+  if (!isConfigured) {
     return (
       <div className="flex items-start gap-2 rounded-default border border-border bg-surface-2 p-4 text-[13px] text-text-muted">
         <IconAlertTriangle size={16} className="mt-0.5 shrink-0 text-accent" />
         <span>
-          {mode === "signup" ? "Sign up" : "Login"} isn&apos;t configured yet — Supabase
-          credentials are missing.
+          {mode === "signup" ? "Sign up" : "Login"} isn&apos;t configured yet — the database isn&apos;t
+          reachable.
         </span>
       </div>
     );
@@ -82,6 +86,10 @@ export default function PasswordAuthForm({
         return;
       }
 
+      // Login is shared by both identities: /api/auth/login checks the admin
+      // table first and tells us which kind of session it created, so the
+      // admin lands in /admin and everyone else goes where they were headed.
+      // Signup never returns isAdmin — it can only ever create a buyer.
       router.push(body.isAdmin ? "/admin" : redirectTo);
       router.refresh();
     } catch {
@@ -136,7 +144,7 @@ export default function PasswordAuthForm({
         <div className="flex items-center gap-2 rounded-default border border-border bg-surface px-3.5 py-3">
           <IconLock size={16} className="text-text-dim" />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             minLength={mode === "signup" ? 8 : undefined}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -145,6 +153,14 @@ export default function PasswordAuthForm({
             placeholder={mode === "signup" ? "At least 8 characters" : "••••••••"}
             className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="shrink-0 text-text-dim hover:text-text"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+          </button>
         </div>
       </label>
 

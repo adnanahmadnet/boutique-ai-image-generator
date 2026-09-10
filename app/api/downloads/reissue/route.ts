@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { isDatabaseConfigured, queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/get-current-user";
 import { createDownloadGrant } from "@/lib/download-token";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSiteUrl } from "@/lib/site-url";
 
 // Authenticated. Backs the "Get a new download link" button on
 // /dashboard/downloads once the original 30-minute link has expired.
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Not configured." }, { status: 503 });
   }
 
@@ -24,11 +24,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing orderId." }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
   }
@@ -44,15 +40,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // RLS-scoped (orders_select_own) — this can only ever resolve to a row the
-  // caller owns, so no separate ownership check is needed here.
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id, status")
-    .eq("id", orderId)
-    .maybeSingle();
+  // Ownership check done explicitly here — there's no RLS layer to rely on
+  // once queries run through the app's own trusted DB connection.
+  const order = await queryOne<{ id: string; status: string }>(
+    `select id, status from public.orders where id = $1 and buyer_id = $2`,
+    [orderId, user.id]
+  );
 
-  if (orderError || !order) {
+  if (!order) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
@@ -63,18 +58,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: license, error: licenseError } = await supabase
-    .from("licenses")
-    .select("id")
-    .eq("order_id", order.id)
-    .maybeSingle();
+  const license = await queryOne<{ id: string }>(
+    `select id from public.licenses where order_id = $1`,
+    [order.id]
+  );
 
-  if (licenseError || !license) {
+  if (!license) {
     return NextResponse.json({ error: "License not found for this order." }, { status: 404 });
   }
 
   try {
-    const grant = await createDownloadGrant(order.id as string, license.id as string);
+    const grant = await createDownloadGrant(order.id, license.id);
     return NextResponse.json({
       downloadUrl: `${getSiteUrl()}/api/download?token=${grant.token}`,
       expiresAt: grant.expiresAt.toISOString(),

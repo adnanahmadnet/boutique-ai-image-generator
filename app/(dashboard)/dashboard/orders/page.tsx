@@ -1,20 +1,31 @@
-import { createClient } from "@/lib/supabase/server";
+import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/get-current-user";
 import OrderTable, { type OrderRow } from "@/components/dashboard/OrderTable";
 
 export default async function DashboardOrdersPage() {
-  const supabase = await createClient();
+  const user = await getCurrentUser();
 
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, created_at, amount, currency, status")
-    .order("created_at", { ascending: false });
+  const orders = user
+    ? await query<{
+        id: string;
+        created_at: string;
+        amount: string;
+        currency: string;
+        status: OrderRow["status"];
+      }>(
+        `select id, created_at, amount, currency, status from public.orders
+         where buyer_id = $1
+         order by created_at desc`,
+        [user.id]
+      )
+    : [];
 
-  const rows: OrderRow[] = (orders ?? []).map((order) => ({
-    id: order.id as string,
-    createdAt: order.created_at as string,
-    amount: order.amount as string,
-    currency: order.currency as string,
-    status: order.status as OrderRow["status"],
+  const rows: OrderRow[] = orders.map((order) => ({
+    id: order.id,
+    createdAt: order.created_at,
+    amount: order.amount,
+    currency: order.currency,
+    status: order.status,
   }));
 
   return (

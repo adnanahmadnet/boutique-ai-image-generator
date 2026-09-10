@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
-  const admin = createAdminClient();
-  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  const users = [...(data?.users ?? [])].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  const users = await query<{
+    id: string;
+    email: string;
+    created_at: string;
+    last_sign_in_at: string | null;
+  }>(
+    `select id, email, created_at, last_sign_in_at from public.users
+     order by created_at desc`
   );
 
   return (

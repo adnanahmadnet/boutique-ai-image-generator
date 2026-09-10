@@ -5,7 +5,7 @@ import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import Models from "@/components/Models";
 import Features from "@/components/Features";
 import WorkflowSteps from "@/components/WorkflowSteps";
-import { HERO_PAIR } from "@/data/gallery";
+import { COMBINE_DEMO } from "@/data/gallery";
 
 export const metadata: Metadata = {
   title: "Features — AI Image Generation Pipeline",
@@ -23,7 +23,7 @@ export default function FeaturesPage() {
             heading="No photoshoot, no design skills, no waiting"
             subheading="Upload a flat product photo, pick a model, and get a photorealistic on-model shot back — the pipeline handles routing, retries, and delivery."
           />
-          <BeforeAfterSlider before={HERO_PAIR.before} after={HERO_PAIR.after} />
+          <BeforeAfterSlider before={COMBINE_DEMO.pose} after={COMBINE_DEMO.result} />
         </Container>
       </section>
 

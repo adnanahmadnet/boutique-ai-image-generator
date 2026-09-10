@@ -15,14 +15,20 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Required infrastructure
 
-This app needs three external services configured before its core flows work end-to-end. Without them, pages render with clear "not configured" placeholders instead of crashing (see `lib/supabase/env.ts`'s `isSupabaseConfigured()` and the same pattern in `PayPalCheckout.tsx`/`MagicLinkForm.tsx`).
+This app needs two external services configured before its core flows work end-to-end. Without them, pages render with clear "not configured" placeholders instead of crashing (see `lib/db.ts`'s `isDatabaseConfigured()` and the same pattern in `PayPalCheckout.tsx`).
 
-### 1. Supabase (accounts, orders, licenses, downloads, rate limiting)
+### 1. Postgres (accounts, orders, licenses, downloads, rate limiting)
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Run `supabase/migrations/0001_init.sql` against it (Supabase Studio SQL editor, or `supabase db push` if using the CLI).
-3. Copy the Project URL, `anon` key, and `service_role` key from **Project Settings → API** into `.env.local` (see `.env.example`).
-4. Under **Authentication → Providers**, ensure Email is enabled with **Magic Link** (no password) sign-in.
+This app owns its database and auth entirely — no external auth provider. Point it at any Postgres instance (a local install for development, a managed instance in production):
+
+1. Create a database and a role for the app, e.g.:
+   ```sql
+   create role boutique_ai_app login password 'change-me';
+   create database boutique_ai owner boutique_ai_app;
+   ```
+2. Apply the schema: `psql -U boutique_ai_app -h localhost -d boutique_ai -f db/migrations/0001_init.sql`.
+3. Set `DATABASE_URL` in `.env.local` to that role/database's connection string (see `.env.example`).
+4. Login/signup is plain email + password (bcrypt-hashed, see `lib/auth/`) — there's no email-confirmation step, since that would need a transactional email provider wired up for it.
 
 ### 2. PayPal (checkout + webhooks)
 
@@ -56,4 +62,5 @@ See `.env.example` for the full list with inline comments. Copy it to `.env.loca
 - Payment is wired to **PayPal Sandbox**; the webhook handler (`app/api/webhooks/paypal/route.ts`) is the sole source of truth for granting access — client-side capture is a UX fast-path only.
 - License keys (`lib/license.ts`) are entitlement/support records, not technically-enforced activation keys — nothing in the delivered ZIP validates them.
 - Download links are DB-backed (`download_grants` table), expire in 30 minutes, and are revoked automatically if an order is refunded.
-- Rate limiting (`lib/rate-limit.ts`) is a Postgres-backed windowed counter, applied to login, download, reissue, contact, and checkout endpoints. It fails open if Supabase isn't configured.
+- Rate limiting (`lib/rate-limit.ts`) is a Postgres-backed windowed counter, applied to login, download, reissue, contact, and checkout endpoints. It fails open if the database isn't configured.
+- Auth is entirely self-hosted (`lib/auth/`, `lib/get-current-user.ts`): bcrypt-hashed passwords, opaque session tokens (SHA-256 hash stored, raw token only in an httpOnly cookie). There's no Row Level Security layer — every query that scopes data to "the current user" does so with an explicit `WHERE buyer_id = $1` in application code, not a database policy.

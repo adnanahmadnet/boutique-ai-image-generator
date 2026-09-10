@@ -3,6 +3,7 @@ import Link from "next/link";
 import Container from "@/components/Container";
 import SectionHeading from "@/components/SectionHeading";
 import PasswordAuthForm from "@/components/auth/PasswordAuthForm";
+import { isDatabaseConfigured } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Sign Up — AI Image Generation Pipeline",
@@ -25,7 +26,11 @@ export default async function SignupPage({
           subheading="Set an email and password. You can browse what's included before you pay."
         />
         <div className="w-full max-w-sm">
-          <PasswordAuthForm mode="signup" redirectTo={redirectTo || "/"} />
+          <PasswordAuthForm
+            mode="signup"
+            redirectTo={redirectTo || "/"}
+            isConfigured={isDatabaseConfigured()}
+          />
           <p className="mt-4 text-center text-[13px] text-text-muted">
             Already have an account?{" "}
             <Link href="/login" className="text-accent hover:opacity-80">

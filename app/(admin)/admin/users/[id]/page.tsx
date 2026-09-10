@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconArrowLeft, IconCircleCheck, IconCircleX, IconClock, IconReceiptRefund } from "@tabler/icons-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query, queryOne } from "@/lib/db";
 import { getDisplayName } from "@/lib/user-display";
-import { isAdminEmail } from "@/lib/admin";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
 
 export const dynamic = "force-dynamic";
@@ -53,31 +52,50 @@ export default async function AdminUserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const admin = createAdminClient();
 
-  const { data: userResponse, error: userError } = await admin.auth.admin.getUserById(id);
+  const user = await queryOne<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    created_at: string;
+    last_sign_in_at: string | null;
+    email_confirmed_at: string | null;
+  }>(
+    `select id, email, full_name, created_at, last_sign_in_at, email_confirmed_at
+     from public.users where id = $1`,
+    [id]
+  );
 
-  if (userError || !userResponse.user) {
+  if (!user) {
     notFound();
   }
 
-  const user = userResponse.user;
+  const orders = await query<{
+    id: string;
+    buyer_email: string;
+    boutique_name: string | null;
+    amount: string;
+    currency: string;
+    status: Status;
+    created_at: string;
+  }>(
+    `select id, buyer_email, boutique_name, amount, currency, status, created_at
+     from public.orders
+     where buyer_id = $1 or buyer_email = $2
+     order by created_at desc`,
+    [user.id, user.email]
+  );
 
-  const { data: orders } = await admin
-    .from("orders")
-    .select("id, buyer_email, boutique_name, amount, currency, status, created_at")
-    .or(`buyer_id.eq.${user.id},buyer_email.eq.${user.email}`)
-    .order("created_at", { ascending: false });
+  const orderIds = orders.map((order) => order.id);
 
-  const orderIds = (orders ?? []).map((order) => order.id as string);
-
-  const { data: licenses } =
+  const licenses =
     orderIds.length > 0
-      ? await admin
-          .from("licenses")
-          .select("license_key, order_id, status, issued_at")
-          .in("order_id", orderIds)
-      : { data: [] };
+      ? await query<{ license_key: string; order_id: string; status: string; issued_at: string }>(
+          `select license_key, order_id, status, issued_at from public.licenses
+           where order_id = any($1::uuid[])`,
+          [orderIds]
+        )
+      : [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -93,13 +111,11 @@ export default async function AdminUserDetailPage({
           <h1 className="mt-3 font-heading text-xl font-bold text-text">{getDisplayName(user)}</h1>
           <p className="mt-1 text-[13.5px] text-text-muted">All information for this account.</p>
         </div>
-        {!isAdminEmail(user.email) ? (
-          <DeleteUserButton userId={user.id} email={user.email ?? ""} />
-        ) : null}
+        <DeleteUserButton userId={user.id} email={user.email ?? ""} />
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-6">
-        <InfoRow label="Name" value={(user.user_metadata?.full_name as string) || "—"} />
+        <InfoRow label="Name" value={user.full_name || "—"} />
         <InfoRow label="Email" value={user.email ?? "—"} />
         <InfoRow label="User ID" value={user.id} />
         <InfoRow label="Signed up" value={new Date(user.created_at).toLocaleString()} />
@@ -112,7 +128,7 @@ export default async function AdminUserDetailPage({
 
       <div>
         <h2 className="mb-3 font-heading text-[15px] font-semibold text-text">
-          Orders ({orders?.length ?? 0})
+          Orders ({orders.length})
         </h2>
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[560px] text-left text-[13px]">
@@ -133,23 +149,21 @@ export default async function AdminUserDetailPage({
               </tr>
             </thead>
             <tbody>
-              {(orders ?? []).map((order) => (
-                <tr key={order.id as string} className="border-t border-border">
-                  <td className="px-4 py-3 text-text-muted">
-                    {(order.boutique_name as string | null) || "—"}
-                  </td>
+              {orders.map((order) => (
+                <tr key={order.id} className="border-t border-border">
+                  <td className="px-4 py-3 text-text-muted">{order.boutique_name || "—"}</td>
                   <td className="px-4 py-3 font-mono text-text">
-                    {order.currency as string} {order.amount as string}
+                    {order.currency} {order.amount}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={order.status as Status} />
+                    <StatusBadge status={order.status} />
                   </td>
                   <td className="px-4 py-3 text-text-muted">
-                    {new Date(order.created_at as string).toLocaleDateString()}
+                    {new Date(order.created_at).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
-              {!orders || orders.length === 0 ? (
+              {orders.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-center text-text-muted">
                     No orders.
@@ -163,23 +177,21 @@ export default async function AdminUserDetailPage({
 
       <div>
         <h2 className="mb-3 font-heading text-[15px] font-semibold text-text">
-          Licenses ({licenses?.length ?? 0})
+          Licenses ({licenses.length})
         </h2>
         <div className="flex flex-col gap-2">
-          {(licenses ?? []).map((license) => (
+          {licenses.map((license) => (
             <div
-              key={license.license_key as string}
+              key={license.license_key}
               className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3"
             >
-              <span className="font-mono text-[13px] text-accent">
-                {license.license_key as string}
-              </span>
+              <span className="font-mono text-[13px] text-accent">{license.license_key}</span>
               <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
-                {license.status as string}
+                {license.status}
               </span>
             </div>
           ))}
-          {!licenses || licenses.length === 0 ? (
+          {licenses.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-6 text-center text-[13.5px] text-text-muted">
               No licenses.
             </p>

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/paypal";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured, isUniqueViolation, query, queryOne } from "@/lib/db";
 import { generateLicenseKey } from "@/lib/license";
 import { createDownloadGrant } from "@/lib/download-token";
 import { sendOrderConfirmationEmail } from "@/lib/email";
@@ -28,16 +27,22 @@ async function handleCaptureCompleted(event: PayPalWebhookEvent) {
     return;
   }
 
-  const admin = createAdminClient();
+  const order = await queryOne<{
+    id: string;
+    buyer_id: string | null;
+    buyer_email: string;
+    boutique_name: string | null;
+    amount: string;
+    currency: string;
+    status: string;
+  }>(
+    `select id, buyer_id, buyer_email, boutique_name, amount, currency, status
+     from public.orders where id = $1`,
+    [orderRowId]
+  );
 
-  const { data: order, error: orderError } = await admin
-    .from("orders")
-    .select("id, buyer_id, buyer_email, boutique_name, amount, currency, status")
-    .eq("id", orderRowId)
-    .maybeSingle();
-
-  if (orderError || !order) {
-    console.error("[webhooks/paypal] order row not found for custom_id", orderRowId, orderError);
+  if (!order) {
+    console.error("[webhooks/paypal] order row not found for custom_id", orderRowId);
     return;
   }
 
@@ -47,49 +52,38 @@ async function handleCaptureCompleted(event: PayPalWebhookEvent) {
     return;
   }
 
-  const { error: updateError } = await admin
-    .from("orders")
-    .update({
-      status: "completed",
-      paypal_capture_id: captureId,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", order.id);
-
-  if (updateError) {
-    console.error("[webhooks/paypal] failed to mark order completed", updateError);
-    return;
-  }
+  await query(
+    `update public.orders set status = 'completed', paypal_capture_id = $1, completed_at = now()
+     where id = $2`,
+    [captureId, order.id]
+  );
 
   const licenseKey = generateLicenseKey();
-  const { data: license, error: licenseError } = await admin
-    .from("licenses")
-    .insert({
-      order_id: order.id,
-      buyer_id: order.buyer_id,
-      license_key: licenseKey,
-    })
-    .select("id")
-    .single();
+  const license = await queryOne<{ id: string }>(
+    `insert into public.licenses (order_id, buyer_id, license_key)
+     values ($1, $2, $3)
+     returning id`,
+    [order.id, order.buyer_id, licenseKey]
+  );
 
-  if (licenseError || !license) {
-    console.error("[webhooks/paypal] failed to create license", licenseError);
+  if (!license) {
+    console.error("[webhooks/paypal] failed to create license for order", order.id);
     return;
   }
 
   let downloadUrl = `${getSiteUrl()}/dashboard/downloads`;
   try {
-    const grant = await createDownloadGrant(order.id as string, license.id as string);
+    const grant = await createDownloadGrant(order.id, license.id);
     downloadUrl = `${getSiteUrl()}/api/download?token=${grant.token}`;
   } catch (grantError) {
     console.error("[webhooks/paypal] failed to create download grant", grantError);
   }
 
-  const emailResult = await sendOrderConfirmationEmail(order.buyer_email as string, {
-    boutiqueName: (order.boutique_name as string | null) ?? undefined,
+  const emailResult = await sendOrderConfirmationEmail(order.buyer_email, {
+    boutiqueName: order.boutique_name ?? undefined,
     licenseKey,
-    amount: order.amount as string,
-    currency: order.currency as string,
+    amount: order.amount,
+    currency: order.currency,
     dashboardUrl: `${getSiteUrl()}/login`,
     downloadUrl,
   });
@@ -103,8 +97,7 @@ async function handleCaptureDenied(event: PayPalWebhookEvent) {
   const orderRowId = event.resource.custom_id;
   if (!orderRowId) return;
 
-  const admin = createAdminClient();
-  await admin.from("orders").update({ status: "failed" }).eq("id", orderRowId);
+  await query(`update public.orders set status = 'failed' where id = $1`, [orderRowId]);
 }
 
 async function handleCaptureRefunded(event: PayPalWebhookEvent) {
@@ -121,12 +114,11 @@ async function handleCaptureRefunded(event: PayPalWebhookEvent) {
     return;
   }
 
-  const admin = createAdminClient();
-  await admin.from("orders").update({ status: "refunded" }).eq("id", orderRowId);
+  await query(`update public.orders set status = 'refunded' where id = $1`, [orderRowId]);
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     // Fail closed: without a DB there's nothing safe to do with a payment
     // webhook. Return 500 so PayPal retries once the app is configured.
     return NextResponse.json({ error: "Not configured." }, { status: 500 });
@@ -161,13 +153,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Signature verification failed." }, { status: 401 });
   }
 
-  const admin = createAdminClient();
-  const { error: idempotencyError } = await admin
-    .from("webhook_events")
-    .insert({ id: event.id, event_type: event.event_type });
-
-  if (idempotencyError) {
-    if (idempotencyError.code === "23505") {
+  try {
+    await query(`insert into public.webhook_events (id, event_type) values ($1, $2)`, [
+      event.id,
+      event.event_type,
+    ]);
+  } catch (idempotencyError) {
+    if (isUniqueViolation(idempotencyError)) {
       // Duplicate delivery of an event we've already processed — ack without
       // reprocessing (PayPal retries deliveries that don't get a fast 200).
       return NextResponse.json({ received: true, duplicate: true });

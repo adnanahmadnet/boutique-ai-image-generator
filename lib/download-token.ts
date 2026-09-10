@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query, queryOne } from "@/lib/db";
 
 // Concrete pick within the doc's 15–60 minute range (see plan §14).
 const TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -25,17 +25,11 @@ export async function createDownloadGrant(
   const token = crypto.randomBytes(TOKEN_BYTES).toString("base64url");
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
 
-  const admin = createAdminClient();
-  const { error } = await admin.from("download_grants").insert({
-    order_id: orderId,
-    license_id: licenseId,
-    token_hash: hashToken(token),
-    expires_at: expiresAt.toISOString(),
-  });
-
-  if (error) {
-    throw new Error(`Failed to create download grant: ${error.message}`);
-  }
+  await query(
+    `insert into public.download_grants (order_id, license_id, token_hash, expires_at)
+     values ($1, $2, $3, $4)`,
+    [orderId, licenseId, hashToken(token), expiresAt.toISOString()]
+  );
 
   return { token, expiresAt };
 }
@@ -45,36 +39,36 @@ export type TokenValidation =
   | { valid: false; reason: "not-found" | "expired" | "order-not-completed" };
 
 export async function verifyDownloadToken(token: string): Promise<TokenValidation> {
-  const admin = createAdminClient();
+  const grant = await queryOne<{
+    id: string;
+    order_id: string;
+    expires_at: string;
+    status: string;
+  }>(
+    `select g.id, g.order_id, g.expires_at, o.status
+     from public.download_grants g
+     join public.orders o on o.id = g.order_id
+     where g.token_hash = $1`,
+    [hashToken(token)]
+  );
 
-  const { data: grant, error } = await admin
-    .from("download_grants")
-    .select("id, order_id, expires_at, orders!inner(status)")
-    .eq("token_hash", hashToken(token))
-    .maybeSingle();
-
-  if (error || !grant) {
+  if (!grant) {
     return { valid: false, reason: "not-found" };
   }
 
-  if (new Date(grant.expires_at as string).getTime() < Date.now()) {
+  if (new Date(grant.expires_at).getTime() < Date.now()) {
     return { valid: false, reason: "expired" };
   }
 
-  const order = grant.orders as unknown as { status: string } | null;
-  if (order?.status !== "completed") {
+  if (grant.status !== "completed") {
     // Covers refunds: revoking access is just flipping orders.status away
     // from "completed" — no need to touch the grant row itself.
     return { valid: false, reason: "order-not-completed" };
   }
 
-  return { valid: true, grantId: grant.id as string, orderId: grant.order_id as string };
+  return { valid: true, grantId: grant.id, orderId: grant.order_id };
 }
 
 export async function markGrantConsumed(grantId: string): Promise<void> {
-  const admin = createAdminClient();
-  await admin
-    .from("download_grants")
-    .update({ consumed_at: new Date().toISOString() })
-    .eq("id", grantId);
+  await query(`update public.download_grants set consumed_at = now() where id = $1`, [grantId]);
 }

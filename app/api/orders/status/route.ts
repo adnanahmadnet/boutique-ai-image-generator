@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured, queryOne } from "@/lib/db";
 
 // Polled by the post-payment success screen until the webhook lands and
 // flips status to "completed". Only exposes status — never license/download
 // data — so knowing an order id (a UUID the browser already holds from
 // create-order) can't be used to pull anything sensitive.
 export async function GET(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Not configured." }, { status: 503 });
   }
 
@@ -17,18 +16,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-      .from("orders")
-      .select("status")
-      .eq("id", orderId)
-      .maybeSingle();
+    const order = await queryOne<{ status: string }>(
+      `select status from public.orders where id = $1`,
+      [orderId]
+    );
 
-    if (error || !data) {
+    if (!order) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ status: data.status });
+    return NextResponse.json({ status: order.status });
   } catch (error) {
     console.error("[orders/status]", error);
     return NextResponse.json({ error: "Internal error." }, { status: 500 });

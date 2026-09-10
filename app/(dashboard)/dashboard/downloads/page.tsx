@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
-import { createClient } from "@/lib/supabase/server";
+import { query, queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/get-current-user";
 import { getDisplayName } from "@/lib/user-display";
 import DownloadCard from "@/components/dashboard/DownloadCard";
 import LicenseKeyCard from "@/components/dashboard/LicenseKeyCard";
@@ -8,28 +9,27 @@ import PipelineDiagram from "@/components/dashboard/PipelineDiagram";
 import ResourceList from "@/components/dashboard/ResourceList";
 
 export default async function DashboardDownloadsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const displayName = getDisplayName(user);
 
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, created_at, currency, amount")
-    .eq("status", "completed")
-    .order("created_at", { ascending: false });
+  const orders = user
+    ? await query<{ id: string; created_at: string; currency: string; amount: string }>(
+        `select id, created_at, currency, amount from public.orders
+         where buyer_id = $1 and status = 'completed'
+         order by created_at desc`,
+        [user.id]
+      )
+    : [];
 
-  const unlocked = Boolean(orders && orders.length > 0);
-  const latestOrder = orders?.[0];
+  const unlocked = orders.length > 0;
+  const latestOrder = orders[0];
 
-  const { data: license } = latestOrder
-    ? await supabase
-        .from("licenses")
-        .select("license_key")
-        .eq("order_id", latestOrder.id)
-        .maybeSingle()
-    : { data: null };
+  const license = latestOrder
+    ? await queryOne<{ license_key: string }>(
+        `select license_key from public.licenses where order_id = $1`,
+        [latestOrder.id]
+      )
+    : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -61,7 +61,7 @@ export default async function DashboardDownloadsPage() {
 
       {license ? (
         <div className="rounded-lg border border-border bg-surface p-6">
-          <LicenseKeyCard licenseKey={license.license_key as string} />
+          <LicenseKeyCard licenseKey={license.license_key} />
         </div>
       ) : null}
 
@@ -71,9 +71,9 @@ export default async function DashboardDownloadsPage() {
         <div className="flex flex-col gap-4">
           {orders.map((order) => (
             <DownloadCard
-              key={order.id as string}
-              orderId={order.id as string}
-              label={`Purchased ${new Date(order.created_at as string).toLocaleDateString()} — ${order.currency} ${order.amount}`}
+              key={order.id}
+              orderId={order.id}
+              label={`Purchased ${new Date(order.created_at).toLocaleDateString()} — ${order.currency} ${order.amount}`}
             />
           ))}
         </div>

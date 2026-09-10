@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
 import Container from "@/components/Container";
-import BeforeAfterSlider from "@/components/BeforeAfterSlider";
+import CombineDemoVisual from "@/components/CombineDemoVisual";
 import { SITE } from "@/data/site";
-import { HERO_PAIR } from "@/data/gallery";
 
 export default function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
   const { hero } = SITE;
@@ -44,7 +43,7 @@ export default function Hero({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
 
         <div className="flex justify-center lg:justify-end">
-          <BeforeAfterSlider before={HERO_PAIR.before} after={HERO_PAIR.after} />
+          <CombineDemoVisual className="max-w-md" />
         </div>
       </Container>
     </section>

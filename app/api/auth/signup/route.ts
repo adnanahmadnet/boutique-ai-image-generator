@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { isDatabaseConfigured, isUniqueViolation, queryOne } from "@/lib/db";
+import { hashPassword } from "@/lib/auth/password";
+import { createSession } from "@/lib/auth/session";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { claimGuestOrders } from "@/lib/auth-claim";
-import { isAdminEmail } from "@/lib/admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Sign up isn't configured yet." }, { status: 503 });
   }
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     name = body.name?.trim();
-    email = body.email?.trim();
+    email = body.email?.trim().toLowerCase();
     password = body.password;
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
@@ -47,39 +47,60 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: name } },
-  });
+  // The shared login form checks public.admins first, so a buyer row sharing
+  // the admin's email could never be signed into. Reject it here rather than
+  // creating an account that silently doesn't work. Deliberately worded the
+  // same as a duplicate buyer email so this can't be used to probe for the
+  // admin address.
+  const adminEmail = await queryOne<{ id: string }>(
+    `select id from public.admins where email = $1`,
+    [email]
+  );
 
-  if (error) {
-    // GoTrue returns "User already registered" (no dedicated error code) once
-    // an email is taken and confirmations are disabled — normalize to a
-    // clearer, consistent message rather than passing its wording through.
-    const isDuplicate = /already registered|already exists/i.test(error.message);
+  if (adminEmail) {
     return NextResponse.json(
-      { error: isDuplicate ? "An account with this email already exists." : error.message },
+      { error: "An account with this email already exists." },
       { status: 400 }
     );
   }
 
-  if (data.user && data.session) {
-    // A session came back immediately (email confirmation disabled) — claim
-    // any guest-checkout orders placed with this email before signup.
-    try {
-      await claimGuestOrders(data.user.id, email);
-    } catch (claimError) {
-      console.error("[auth/signup] failed to claim guest orders", claimError);
+  const passwordHash = await hashPassword(password);
+
+  // Public signup only ever creates a buyer account. Admin is a fully
+  // separate identity (public.admins) that this endpoint can't reach — see
+  // db/migrations/0003_separate_admin_table.sql.
+  let userId: string;
+  try {
+    const row = await queryOne<{ id: string }>(
+      `insert into public.users (email, password_hash, full_name)
+       values ($1, $2, $3)
+       returning id`,
+      [email, passwordHash, name]
+    );
+    userId = row!.id;
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return NextResponse.json(
+        { error: "An account with this email already exists." },
+        { status: 400 }
+      );
     }
+    console.error("[auth/signup]", error);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+
+  await createSession(userId);
+
+  try {
+    await claimGuestOrders(userId, email);
+  } catch (claimError) {
+    console.error("[auth/signup] failed to claim guest orders", claimError);
   }
 
   return NextResponse.json({
     ok: true,
-    // If email confirmation is still enabled on the Supabase project, there's
-    // no session yet — the client should tell the user to check their email.
-    needsConfirmation: !data.session,
-    isAdmin: isAdminEmail(email),
+    // Always confirmed — no transactional email provider is wired up for a
+    // confirmation-link flow, so accounts are usable immediately.
+    needsConfirmation: false,
   });
 }

@@ -2,14 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { IconLogout } from "@tabler/icons-react";
-import { createClient } from "@/lib/supabase/client";
 
 export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
     router.refresh();
   };

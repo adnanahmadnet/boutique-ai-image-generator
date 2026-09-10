@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPayPalOrder } from "@/lib/paypal";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured, query, queryOne } from "@/lib/db";
+import { getCurrentUser } from "@/lib/get-current-user";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { PRICING } from "@/data/pricing";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json(
       { error: "Checkout isn't configured yet. Please try again later." },
       { status: 503 }
@@ -35,11 +34,7 @@ export async function POST(request: NextRequest) {
 
   // A signed-in buyer's own email is authoritative — attach buyer_id directly
   // so this order never needs the guest-checkout claim step on next login.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   const email = user?.email ?? body.email?.trim();
 
   if (!email || !EMAIL_RE.test(email)) {
@@ -47,33 +42,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const admin = createAdminClient();
+    const orderRow = await queryOne<{ id: string }>(
+      `insert into public.orders (buyer_id, buyer_email, boutique_name, amount, currency, status)
+       values ($1, $2, $3, $4, $5, 'pending')
+       returning id`,
+      [user?.id ?? null, email, boutiqueName || null, PRICING.amount, PRICING.currency]
+    );
 
-    const { data: orderRow, error: insertError } = await admin
-      .from("orders")
-      .insert({
-        buyer_id: user?.id ?? null,
-        buyer_email: email,
-        boutique_name: boutiqueName || null,
-        amount: PRICING.amount,
-        currency: PRICING.currency,
-        status: "pending",
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !orderRow) {
-      throw new Error(insertError?.message ?? "Failed to create order row.");
+    if (!orderRow) {
+      throw new Error("Failed to create order row.");
     }
 
-    const paypalOrder = await createPayPalOrder(orderRow.id as string);
+    const paypalOrder = await createPayPalOrder(orderRow.id);
 
-    const { error: updateError } = await admin
-      .from("orders")
-      .update({ paypal_order_id: paypalOrder.id })
-      .eq("id", orderRow.id);
-
-    if (updateError) {
+    try {
+      await query(`update public.orders set paypal_order_id = $1 where id = $2`, [
+        paypalOrder.id,
+        orderRow.id,
+      ]);
+    } catch (updateError) {
       console.error("[paypal/create-order] failed to link paypal order id", updateError);
     }
 

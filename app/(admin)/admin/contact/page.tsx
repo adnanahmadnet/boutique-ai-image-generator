@@ -1,22 +1,33 @@
 import Link from "next/link";
 import { IconUserCircle } from "@tabler/icons-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { query } from "@/lib/db";
 import ReplyForm from "@/components/admin/ReplyForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminContactPage() {
-  const admin = createAdminClient();
-  const { data: messages } = await admin
-    .from("contact_messages")
-    .select("id, buyer_id, name, email, subject, message, reply, replied_at, status, created_at")
-    .order("created_at", { ascending: false });
+  const rows = await query<{
+    id: string;
+    buyer_id: string | null;
+    name: string;
+    email: string;
+    subject: string | null;
+    message: string;
+    reply: string | null;
+    replied_at: string | null;
+    status: string;
+    created_at: string;
+  }>(
+    `select id, buyer_id, name, email, subject, message, reply, replied_at, status, created_at
+     from public.contact_messages
+     order by created_at desc`
+  );
 
-  const rows = messages ?? [];
-
-  const newIds = rows.filter((m) => m.status === "new").map((m) => m.id as string);
+  const newIds = rows.filter((m) => m.status === "new").map((m) => m.id);
   if (newIds.length > 0) {
-    await admin.from("contact_messages").update({ status: "read" }).in("id", newIds);
+    await query(`update public.contact_messages set status = 'read' where id = any($1::uuid[])`, [
+      newIds,
+    ]);
   }
 
   return (
@@ -28,13 +39,13 @@ export default async function AdminContactPage() {
 
       <div className="flex flex-col gap-3">
         {rows.map((message) => (
-          <div key={message.id as string} className="rounded-lg border border-border bg-surface p-5">
+          <div key={message.id} className="rounded-lg border border-border bg-surface p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <span className="font-heading text-[14px] font-semibold text-text">
-                  {message.name as string}
+                  {message.name}
                 </span>
-                <span className="text-[12.5px] text-text-dim">{message.email as string}</span>
+                <span className="text-[12.5px] text-text-dim">{message.email}</span>
                 {message.buyer_id ? (
                   <Link
                     href={`/admin/users/${message.buyer_id}`}
@@ -51,16 +62,16 @@ export default async function AdminContactPage() {
                 )}
               </div>
               <span className="font-mono text-[11px] text-text-dim">
-                {new Date(message.created_at as string).toLocaleString()}
+                {new Date(message.created_at).toLocaleString()}
               </span>
             </div>
             {message.subject ? (
               <p className="mt-2 font-heading text-[13px] font-semibold text-text-muted">
-                {message.subject as string}
+                {message.subject}
               </p>
             ) : null}
             <p className="mt-1 whitespace-pre-wrap text-[13.5px] leading-relaxed text-text-muted">
-              {message.message as string}
+              {message.message}
             </p>
             <span
               className={`mt-3 inline-flex items-center rounded-full border px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wide ${
@@ -69,7 +80,7 @@ export default async function AdminContactPage() {
                   : "border-border bg-surface-2 text-text-muted"
               }`}
             >
-              {message.status as string}
+              {message.status}
             </span>
 
             {message.reply ? (
@@ -78,11 +89,11 @@ export default async function AdminContactPage() {
                   Your reply
                 </span>
                 <p className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-text">
-                  {message.reply as string}
+                  {message.reply}
                 </p>
               </div>
             ) : (
-              <ReplyForm messageId={message.id as string} />
+              <ReplyForm messageId={message.id} />
             )}
           </div>
         ))}

@@ -48,10 +48,9 @@ export default function PrivacyPage() {
               Who we share it with
             </h2>
             <p>
-              PayPal (to process payment), Supabase (our database and authentication
-              provider, used to store orders/licenses and manage login), and our transactional
-              email provider (to send your order confirmation). Each only receives what&apos;s
-              necessary to perform its function.
+              PayPal (to process payment) and our transactional email provider (to send your
+              order confirmation). Orders, licenses, and login are stored in our own database.
+              Each only receives what&apos;s necessary to perform its function.
             </p>
           </section>
 

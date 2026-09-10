@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isDatabaseConfigured, query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/get-current-user";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendContactNotificationEmail } from "@/lib/email";
 import { getDisplayName } from "@/lib/user-display";
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
   const subject = body.subject?.trim();
   const message = body.message?.trim();
 
-  if (!isSupabaseConfigured()) {
+  if (!isDatabaseConfigured()) {
     return NextResponse.json(
       { error: "Contact form isn't configured yet. Please email us directly." },
       { status: 503 }
@@ -40,11 +39,7 @@ export async function POST(request: NextRequest) {
   // A signed-in sender's identity is authoritative (and lets the admin see
   // exactly who asked) — otherwise fall back to the freely-typed name/email
   // from the public contact form.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   const name = user ? getDisplayName(user) : body.name?.trim();
   const email = user?.email ?? body.email?.trim();
 
@@ -56,18 +51,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const admin = createAdminClient();
-    const { error } = await admin.from("contact_messages").insert({
-      buyer_id: user?.id ?? null,
-      name,
-      email,
-      subject: subject || null,
-      message,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
+    await query(
+      `insert into public.contact_messages (buyer_id, name, email, subject, message)
+       values ($1, $2, $3, $4, $5)`,
+      [user?.id ?? null, name, email, subject || null, message]
+    );
 
     await sendContactNotificationEmail({ name, email, subject, message });
 

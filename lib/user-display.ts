@@ -1,13 +1,9 @@
-import type { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/lib/get-current-user";
 
-// The display name set at signup (stored in Supabase's own user_metadata,
-// no separate profiles-table round trip needed). Falls back to email for
-// accounts created before the name field existed.
-export function getDisplayName(user: Pick<User, "email" | "user_metadata"> | null | undefined): string {
+export function getDisplayName(user: Pick<SessionUser, "email" | "full_name"> | null | undefined): string {
   if (!user) return "";
-  const fullName = user.user_metadata?.full_name;
-  if (typeof fullName === "string" && fullName.trim()) {
-    return fullName.trim();
+  if (user.full_name && user.full_name.trim()) {
+    return user.full_name.trim();
   }
   return user.email ?? "";
 }

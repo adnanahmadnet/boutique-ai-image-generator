@@ -9,6 +9,7 @@ export interface NavLink {
 // which is worse than not offering the link. Add it back the moment there
 // are real entries; the page itself already exists at /testimonials.
 export const MAIN_NAV: NavLink[] = [
+  { label: "Home", href: "/" },
   { label: "Features", href: "/features" },
   { label: "Gallery", href: "/gallery" },
   { label: "Pricing", href: "/pricing" },

@@ -1,5 +1,6 @@
 import Hero from "@/components/Hero";
 import StatBar from "@/components/StatBar";
+import StyleShowcase from "@/components/StyleShowcase";
 import WorkflowSteps from "@/components/WorkflowSteps";
 import CombineDemo from "@/components/CombineDemo";
 import Console from "@/components/Console";
@@ -23,6 +24,7 @@ export default async function Home() {
           after the buyer-facing ones rather than leading. */}
       <Hero isLoggedIn={isLoggedIn} />
       <StatBar />
+      <StyleShowcase />
       <CombineDemo />
       <Console />
       <WorkflowSteps />

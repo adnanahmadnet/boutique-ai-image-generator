@@ -1,13 +1,6 @@
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/get-current-user";
 import OrderDetail, { type OrderRow } from "@/components/dashboard/OrderDetail";
-import { PRICING, SUPPORT_ADDON } from "@/data/pricing";
-
-// This is a one-time-purchase product, so a buyer almost always has exactly
-// one order here — the threshold below (base + support add-on) is how we
-// tell, from the amount alone, whether that single purchase included
-// support. Revisit if pricing ever stops being a flat fee plus one add-on.
-const SUPPORT_INCLUDED_THRESHOLD = Number(PRICING.amount) + Number(SUPPORT_ADDON.amount) - 0.01;
 
 export default async function DashboardOrdersPage() {
   const user = await getCurrentUser();
@@ -22,8 +15,9 @@ export default async function DashboardOrdersPage() {
         amount: string;
         currency: string;
         status: OrderRow["status"];
+        includes_support: boolean;
       }>(
-        `select id, created_at, amount, currency, status from public.orders
+        `select id, created_at, amount, currency, status, includes_support from public.orders
          where buyer_id = $1 and status = 'completed'
          order by created_at desc
          limit 1`,
@@ -37,7 +31,7 @@ export default async function DashboardOrdersPage() {
     amount: order.amount,
     currency: order.currency,
     status: order.status,
-    includesSupport: Number(order.amount) >= SUPPORT_INCLUDED_THRESHOLD,
+    includesSupport: order.includes_support,
   }));
 
   return (

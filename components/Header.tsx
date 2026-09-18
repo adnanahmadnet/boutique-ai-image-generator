@@ -16,9 +16,13 @@ const HIDE_AFTER_Y = 80;
 export default function Header({
   displayName,
   isLoggedIn,
+  dashboardHref = "/dashboard/downloads",
+  dashboardLabel = "Dashboard",
 }: {
   displayName: string | null;
   isLoggedIn: boolean;
+  dashboardHref?: string;
+  dashboardLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -70,10 +74,10 @@ export default function Header({
           ))}
           {isLoggedIn ? (
             <Link
-              href="/dashboard/downloads"
+              href={dashboardHref}
               className="text-[13.5px] text-text-muted transition-colors hover:text-text"
             >
-              Dashboard
+              {dashboardLabel}
             </Link>
           ) : null}
         </nav>
@@ -134,11 +138,11 @@ export default function Header({
             ))}
             {isLoggedIn ? (
               <Link
-                href="/dashboard/downloads"
+                href={dashboardHref}
                 onClick={() => setOpen(false)}
                 className="rounded-default px-2 py-2.5 text-[14px] text-text-muted hover:bg-surface hover:text-text"
               >
-                Dashboard
+                {dashboardLabel}
               </Link>
             ) : null}
             <div className="mt-2 flex flex-col gap-2 border-t border-border pt-3">

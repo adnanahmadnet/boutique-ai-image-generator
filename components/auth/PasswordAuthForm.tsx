@@ -6,6 +6,8 @@ import {
   IconMail,
   IconLock,
   IconUser,
+  IconPhone,
+  IconBuildingStore,
   IconLoader2,
   IconAlertTriangle,
   IconCheck,
@@ -31,6 +33,8 @@ export default function PasswordAuthForm({
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [boutiqueName, setBoutiqueName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [state, setState] = useState<FormState>({ status: "idle" });
@@ -69,7 +73,11 @@ export default function PasswordAuthForm({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mode === "signup" ? { name, email, password } : { email, password }),
+        body: JSON.stringify(
+          mode === "signup"
+            ? { name, email, phone, boutiqueName, password }
+            : { email, password }
+        ),
       });
       const body = await res.json();
 
@@ -86,11 +94,12 @@ export default function PasswordAuthForm({
         return;
       }
 
-      // Login is shared by both identities: /api/auth/login checks the admin
-      // table first and tells us which kind of session it created, so the
-      // admin lands in /admin and everyone else goes where they were headed.
-      // Signup never returns isAdmin — it can only ever create a buyer.
-      router.push(body.isAdmin ? "/admin" : redirectTo);
+      // Login is shared by all three identities: /api/auth/login checks
+      // admins then support agents first and tells us which kind of session
+      // it created, so each lands on its own dashboard and everyone else
+      // goes where they were headed. Signup never returns isAdmin/isSupport
+      // — it can only ever create a buyer.
+      router.push(body.isAdmin ? "/admin" : body.isSupport ? "/support" : redirectTo);
       router.refresh();
     } catch {
       setState({ status: "error", message: "Something went wrong. Please try again." });
@@ -100,23 +109,63 @@ export default function PasswordAuthForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {mode === "signup" ? (
-        <label className="flex flex-col gap-1.5">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
-            Name
-          </span>
-          <div className="flex items-center gap-2 rounded-default border border-border bg-surface px-3.5 py-3">
-            <IconUser size={16} className="text-text-dim" />
-            <input
-              type="text"
-              required
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Your name"
-              className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
-            />
-          </div>
-        </label>
+        <>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
+              Name
+            </span>
+            <div className="flex items-center gap-2 rounded-default border border-border bg-surface px-3.5 py-3">
+              <IconUser size={16} className="text-text-dim" />
+              <input
+                type="text"
+                required
+                autoComplete="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Your name"
+                className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
+              Phone number
+            </span>
+            <div className="flex items-center gap-2 rounded-default border border-border bg-surface px-3.5 py-3">
+              <IconPhone size={16} className="text-text-dim" />
+              <input
+                type="tel"
+                required
+                autoComplete="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="+1 555 123 4567"
+                className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
+              />
+            </div>
+            <span className="text-[11.5px] text-text-dim">
+              So our support team can actually reach you if you need help.
+            </span>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
+              Boutique name (optional)
+            </span>
+            <div className="flex items-center gap-2 rounded-default border border-border bg-surface px-3.5 py-3">
+              <IconBuildingStore size={16} className="text-text-dim" />
+              <input
+                type="text"
+                autoComplete="organization"
+                value={boutiqueName}
+                onChange={(event) => setBoutiqueName(event.target.value)}
+                placeholder="Your boutique's name"
+                className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
+              />
+            </div>
+          </label>
+        </>
       ) : null}
 
       <label className="flex flex-col gap-1.5">

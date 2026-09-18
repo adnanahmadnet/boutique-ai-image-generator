@@ -49,10 +49,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const order = await queryOne<{ id: string }>(
-      `insert into public.orders (buyer_id, buyer_email, amount, currency, status, completed_at)
-       values ($1, $2, $3, $4, 'completed', now())
+      `insert into public.orders
+         (buyer_id, buyer_email, amount, currency, status, completed_at, includes_support)
+       values ($1, $2, $3, $4, 'completed', now(), $5)
        returning id`,
-      [user?.id ?? null, email, amount, PRICING.currency]
+      [user?.id ?? null, email, amount, PRICING.currency, addSupport]
     );
 
     if (!order) {
@@ -65,6 +66,17 @@ export async function POST(request: NextRequest) {
        values ($1, $2, $3)`,
       [order.id, user?.id ?? null, licenseKey]
     );
+
+    // Feeds the support-team dashboard (/support): one request per order
+    // that included the add-on, starting unclaimed until an agent picks it
+    // up. See db/migrations/0004_support_team.sql.
+    if (addSupport) {
+      await query(
+        `insert into public.support_requests (order_id, buyer_id, buyer_email)
+         values ($1, $2, $3)`,
+        [order.id, user?.id ?? null, email]
+      );
+    }
 
     const notifyMessage = addSupport
       ? `Wants the ${PRICING.planName} ($${PRICING.amount}) plus the ${SUPPORT_ADDON.label} add-on ($${SUPPORT_ADDON.amount}) — total $${amount} ${PRICING.currency}. Access has been granted automatically (no live payment yet) — please follow up to collect payment and scope the support work.`

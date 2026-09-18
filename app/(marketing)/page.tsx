@@ -10,11 +10,10 @@ import Models from "@/components/Models";
 import PricingTeaser from "@/components/PricingTeaser";
 import Testimonials from "@/components/Testimonials";
 import { TESTIMONIALS } from "@/data/testimonials";
-import { getCurrentUser } from "@/lib/get-current-user";
+import { getCurrentViewer } from "@/lib/get-current-viewer";
 
 export default async function Home() {
-  const user = await getCurrentUser();
-  const isLoggedIn = Boolean(user);
+  const { isLoggedIn } = await getCurrentViewer();
 
   return (
     <>

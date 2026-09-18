@@ -4,6 +4,7 @@ import { IconArrowLeft, IconCircleCheck, IconCircleX, IconClock, IconReceiptRefu
 import { query, queryOne } from "@/lib/db";
 import { getDisplayName } from "@/lib/user-display";
 import DeleteUserButton from "@/components/admin/DeleteUserButton";
+import InternalAccountToggle from "@/components/admin/InternalAccountToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +58,18 @@ export default async function AdminUserDetailPage({
     id: string;
     email: string;
     full_name: string | null;
+    phone: string | null;
+    boutique_name: string | null;
+    is_internal: boolean;
     created_at: string;
     last_sign_in_at: string | null;
     email_confirmed_at: string | null;
   }>(
-    `select id, email, full_name, created_at, last_sign_in_at, email_confirmed_at
-     from public.users where id = $1`,
+    `select u.id, u.email, u.full_name, p.phone, p.boutique_name, u.is_internal,
+            u.created_at, u.last_sign_in_at, u.email_confirmed_at
+     from public.users u
+     left join public.profiles p on p.id = u.id
+     where u.id = $1`,
     [id]
   );
 
@@ -111,12 +118,17 @@ export default async function AdminUserDetailPage({
           <h1 className="mt-3 font-heading text-xl font-bold text-text">{getDisplayName(user)}</h1>
           <p className="mt-1 text-[13.5px] text-text-muted">All information for this account.</p>
         </div>
-        <DeleteUserButton userId={user.id} email={user.email ?? ""} />
+        <div className="flex items-center gap-2">
+          <InternalAccountToggle userId={user.id} isInternal={user.is_internal} />
+          <DeleteUserButton userId={user.id} email={user.email ?? ""} />
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-surface p-6">
         <InfoRow label="Name" value={user.full_name || "—"} />
         <InfoRow label="Email" value={user.email ?? "—"} />
+        <InfoRow label="Phone" value={user.phone || "—"} />
+        <InfoRow label="Boutique" value={user.boutique_name || "—"} />
         <InfoRow label="User ID" value={user.id} />
         <InfoRow label="Signed up" value={new Date(user.created_at).toLocaleString()} />
         <InfoRow

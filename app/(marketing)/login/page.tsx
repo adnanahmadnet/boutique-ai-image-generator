@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Container from "@/components/Container";
 import SectionHeading from "@/components/SectionHeading";
 import PasswordAuthForm from "@/components/auth/PasswordAuthForm";
 import { isDatabaseConfigured } from "@/lib/db";
+import { getCurrentViewer } from "@/lib/get-current-viewer";
 
 export const metadata: Metadata = {
   title: "Login — PixelCore Engine",
@@ -15,6 +17,17 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ redirectTo?: string }>;
 }) {
+  // Already signed in (as any of the three identities) — send them straight
+  // to their own dashboard rather than showing the form again. Ignoring
+  // `redirectTo` here on purpose: honoring it could bounce someone back to
+  // a protected route their *current* identity can't access (e.g. a buyer
+  // hitting /login?redirectTo=/admin), which would just redirect them back
+  // here in a loop.
+  const viewer = await getCurrentViewer();
+  if (viewer.isLoggedIn) {
+    redirect(viewer.dashboardHref);
+  }
+
   const { redirectTo } = await searchParams;
 
   return (

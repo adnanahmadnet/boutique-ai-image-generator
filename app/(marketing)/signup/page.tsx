@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Container from "@/components/Container";
 import SectionHeading from "@/components/SectionHeading";
 import PasswordAuthForm from "@/components/auth/PasswordAuthForm";
 import { isDatabaseConfigured } from "@/lib/db";
+import { getCurrentViewer } from "@/lib/get-current-viewer";
 
 export const metadata: Metadata = {
   title: "Sign Up — PixelCore Engine",
@@ -15,6 +17,14 @@ export default async function SignupPage({
 }: {
   searchParams: Promise<{ redirectTo?: string }>;
 }) {
+  // Already signed in — send them to their own dashboard instead of
+  // showing the signup form. See the matching guard in login/page.tsx for
+  // why `redirectTo` is deliberately ignored here.
+  const viewer = await getCurrentViewer();
+  if (viewer.isLoggedIn) {
+    redirect(viewer.dashboardHref);
+  }
+
   const { redirectTo } = await searchParams;
 
   return (

@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Buyers and admins are two entirely separate identities with their own
-// session cookies (see lib/auth/session.ts and lib/auth/admin-session.ts) —
-// each protected area is gated on its own cookie, never the other's.
+// Buyers, admins, and support agents are three entirely separate identities
+// with their own session cookies (see lib/auth/session.ts,
+// lib/auth/admin-session.ts, and lib/auth/support-session.ts) — each
+// protected area is gated on its own cookie, never another's.
 const SESSION_COOKIE_NAME = "session_token";
 const ADMIN_SESSION_COOKIE_NAME = "admin_session_token";
+const SUPPORT_SESSION_COOKIE_NAME = "support_session_token";
 
 // Cheap, DB-free early redirect for UX (this runs on the Edge runtime, which
 // can't reach Postgres directly). It only checks whether the relevant
@@ -27,6 +29,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/support")) {
+    if (!request.cookies.get(SUPPORT_SESSION_COOKIE_NAME)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/dashboard") && !request.cookies.get(SESSION_COOKIE_NAME)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -38,5 +50,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/support/:path*"],
 };

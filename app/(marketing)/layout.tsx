@@ -1,5 +1,4 @@
-import { getCurrentUser } from "@/lib/get-current-user";
-import { getDisplayName } from "@/lib/user-display";
+import { getCurrentViewer } from "@/lib/get-current-viewer";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -10,16 +9,16 @@ import Footer from "@/components/Footer";
 export const dynamic = "force-dynamic";
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
-  // getCurrentUser() only ever resolves a buyer session — an admin session
-  // lives on a separate cookie (see lib/get-current-admin.ts) and is never
-  // reflected in the buyer-facing header.
-  const user = await getCurrentUser();
-  const displayName = user ? getDisplayName(user) : null;
-  const isLoggedIn = Boolean(user);
+  const viewer = await getCurrentViewer();
 
   return (
     <>
-      <Header displayName={displayName} isLoggedIn={isLoggedIn} />
+      <Header
+        displayName={viewer.displayName}
+        isLoggedIn={viewer.isLoggedIn}
+        dashboardHref={viewer.dashboardHref}
+        dashboardLabel={viewer.dashboardLabel}
+      />
       <main>{children}</main>
       <Footer />
     </>

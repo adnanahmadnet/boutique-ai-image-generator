@@ -3,6 +3,7 @@ import { isDatabaseConfigured, query, queryOne } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { createAdminSession } from "@/lib/auth/admin-session";
+import { createSupportSession } from "@/lib/auth/support-session";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { claimGuestOrders } from "@/lib/auth-claim";
 
@@ -63,6 +64,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, isAdmin: true });
   }
 
+  // Same shared entry point covers support agents, checked next — their own
+  // table and session type (see lib/auth/support-session.ts), created only
+  // by an admin from /admin/support-team, never by public signup.
+  const agent = await queryOne<{ id: string; password_hash: string }>(
+    `select id, password_hash from public.support_agents where email = $1 and is_active = true`,
+    [email]
+  );
+
+  if (agent) {
+    if (!(await verifyPassword(password, agent.password_hash))) {
+      return NextResponse.json({ error: "Incorrect email or password." }, { status: 401 });
+    }
+
+    await createSupportSession(agent.id);
+    await query(`update public.support_agents set last_sign_in_at = now() where id = $1`, [
+      agent.id,
+    ]);
+
+    return NextResponse.json({ ok: true, isAdmin: false, isSupport: true });
+  }
+
   const user = await queryOne<{ id: string; password_hash: string }>(
     `select id, password_hash from public.users where email = $1`,
     [email]
@@ -81,5 +103,5 @@ export async function POST(request: NextRequest) {
     console.error("[auth/login] failed to claim guest orders", claimError);
   }
 
-  return NextResponse.json({ ok: true, isAdmin: false });
+  return NextResponse.json({ ok: true, isAdmin: false, isSupport: false });
 }

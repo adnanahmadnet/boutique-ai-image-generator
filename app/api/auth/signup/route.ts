@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isDatabaseConfigured, isUniqueViolation, queryOne } from "@/lib/db";
+import { isDatabaseConfigured, isUniqueViolation, query, queryOne } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { claimGuestOrders } from "@/lib/auth-claim";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Lenient on purpose — accepts spaces, dashes, parens, and a leading + for
+// international numbers. This just needs to catch obvious junk, not enforce
+// a strict format the support team can't dial anyway.
+const PHONE_RE = /^[+\d][\d\s\-()]{6,19}$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 export async function POST(request: NextRequest) {
@@ -16,11 +20,15 @@ export async function POST(request: NextRequest) {
   let name: string | undefined;
   let email: string | undefined;
   let password: string | undefined;
+  let phone: string | undefined;
+  let boutiqueName: string | undefined;
   try {
     const body = await request.json();
     name = body.name?.trim();
     email = body.email?.trim().toLowerCase();
     password = body.password;
+    phone = body.phone?.trim();
+    boutiqueName = body.boutiqueName?.trim();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -36,6 +44,11 @@ export async function POST(request: NextRequest) {
       { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` },
       { status: 400 }
     );
+  }
+  // Required so the support team always has a way to reach a buyer that
+  // doesn't depend on them checking email.
+  if (!phone || !PHONE_RE.test(phone)) {
+    return NextResponse.json({ error: "A valid phone number is required." }, { status: 400 });
   }
 
   const ip = getClientIp(request);
@@ -58,6 +71,21 @@ export async function POST(request: NextRequest) {
   );
 
   if (adminEmail) {
+    return NextResponse.json(
+      { error: "An account with this email already exists." },
+      { status: 400 }
+    );
+  }
+
+  // Same reasoning as the admin check above — a support account is also
+  // created out-of-band (by an admin, from /admin/support-team), so public
+  // signup must not let a buyer row collide with one.
+  const supportEmail = await queryOne<{ id: string }>(
+    `select id from public.support_agents where email = $1`,
+    [email]
+  );
+
+  if (supportEmail) {
     return NextResponse.json(
       { error: "An account with this email already exists." },
       { status: 400 }
@@ -87,6 +115,18 @@ export async function POST(request: NextRequest) {
     }
     console.error("[auth/signup]", error);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+
+  // Contact details live in public.profiles, separate from the auth-only
+  // public.users row (see db/migrations/0001_init.sql) — surfaced to the
+  // admin and support dashboards so support can actually reach a buyer.
+  try {
+    await query(
+      `insert into public.profiles (id, boutique_name, phone) values ($1, $2, $3)`,
+      [userId, boutiqueName || null, phone]
+    );
+  } catch (profileError) {
+    console.error("[auth/signup] failed to create profile", profileError);
   }
 
   await createSession(userId);

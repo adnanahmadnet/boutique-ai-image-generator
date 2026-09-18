@@ -36,7 +36,7 @@ export async function sendOrderConfirmationEmail(
     const { error } = await resend.emails.send({
       from,
       to,
-      subject: "Your AI Image Generation Pipeline license & download",
+      subject: "Your PixelCore Engine license & download",
       react: <OrderConfirmationEmail {...props} />,
     });
 

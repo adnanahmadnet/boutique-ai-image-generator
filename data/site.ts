@@ -1,6 +1,6 @@
 export const SITE = {
-  name: "AI Image Generation Pipeline",
-  brand: "Poshak AI",
+  name: "PixelCore Engine",
+  brand: "PixelCore Engine",
   builtBy: "360 Synergy Tech",
   hero: {
     eyebrow: "Built for boutiques",

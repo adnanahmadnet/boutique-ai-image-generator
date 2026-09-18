@@ -8,7 +8,7 @@ import WorkflowSteps from "@/components/WorkflowSteps";
 import { COMBINE_DEMO } from "@/data/gallery";
 
 export const metadata: Metadata = {
-  title: "Features — AI Image Generation Pipeline",
+  title: "Features — PixelCore Engine",
   description:
     "4 AI models behind one interface, real before/after examples, typical turnaround time, and zero design skills required.",
 };

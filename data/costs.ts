@@ -46,5 +46,5 @@ export const COST_EXAMPLE = {
   // shoot costs locally (studio + model + photographer day rate). Deliberately
   // left out rather than guessed at — drop in a real figure for your market
   // and this section becomes the strongest argument on the page.
-  note: "That's the model fee, paid directly to fal.ai. Nothing recurring comes to us.",
+  note: "That's the model fee, paid directly to fal.ai — per generation attempt, not per guaranteed keeper. Nothing recurring comes to us.",
 };

@@ -6,7 +6,7 @@ import PasswordAuthForm from "@/components/auth/PasswordAuthForm";
 import { isDatabaseConfigured } from "@/lib/db";
 
 export const metadata: Metadata = {
-  title: "Login — AI Image Generation Pipeline",
+  title: "Login — PixelCore Engine",
   description: "Access your buyer dashboard, order history, and downloads.",
 };
 
@@ -28,7 +28,7 @@ export default async function LoginPage({
         <div className="w-full max-w-sm">
           <PasswordAuthForm
             mode="login"
-            redirectTo={redirectTo || "/"}
+            redirectTo={redirectTo || "/dashboard"}
             isConfigured={isDatabaseConfigured()}
           />
           <p className="mt-4 text-center text-[13px] text-text-muted">

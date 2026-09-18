@@ -5,7 +5,7 @@ import { SITE } from "@/data/site";
 import { LEGAL } from "@/data/legal";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — AI Image Generation Pipeline",
+  title: "Privacy Policy — PixelCore Engine",
   description: "What we collect, why, and how it's protected.",
 };
 

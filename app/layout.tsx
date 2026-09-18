@@ -21,7 +21,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Image Generation Pipeline — Turn Product Photos Into Campaign-Ready Shots",
+  title: "PixelCore Engine — Turn Product Photos Into Campaign-Ready Shots",
   description:
     "A self-serve, multi-model AI image generation pipeline built on n8n, fal.ai, and Notion. Turn flat product photography into photorealistic on-model imagery in minutes — fully logged, self-healing, no build step.",
 };

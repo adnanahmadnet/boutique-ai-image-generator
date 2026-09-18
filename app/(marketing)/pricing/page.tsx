@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Pricing from "@/components/Pricing";
 
 export const metadata: Metadata = {
-  title: "Pricing — AI Image Generation Pipeline",
+  title: "Pricing — PixelCore Engine",
   description: "One-time purchase, own the full pipeline. Pay securely via PayPal.",
 };
 

@@ -4,8 +4,12 @@ import SectionHeading from "@/components/SectionHeading";
 import PayPalCheckout from "@/components/PayPalCheckout";
 import { SITE } from "@/data/site";
 import { PRICING } from "@/data/pricing";
+import { getCurrentUser } from "@/lib/get-current-user";
 
-export default function Pricing() {
+export default async function Pricing() {
+  const user = await getCurrentUser();
+  const isLoggedIn = Boolean(user);
+
   return (
     <section id="pricing" className="border-y border-border bg-surface/40 py-20 sm:py-28">
       <Container className="flex flex-col items-center gap-12">
@@ -44,7 +48,7 @@ export default function Pricing() {
                 .{PRICING.amount.split(".")[1]} {PRICING.currency}
               </span>
             </div>
-            <PayPalCheckout />
+            <PayPalCheckout isLoggedIn={isLoggedIn} />
           </div>
         </div>
       </Container>

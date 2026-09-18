@@ -5,7 +5,7 @@ import FAQAccordion from "@/components/FAQAccordion";
 import { FAQ_ITEMS } from "@/data/faq";
 
 export const metadata: Metadata = {
-  title: "FAQ — AI Image Generation Pipeline",
+  title: "FAQ — PixelCore Engine",
   description: "Setup requirements, licensing, and refund questions answered.",
 };
 

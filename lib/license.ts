@@ -4,7 +4,7 @@ const GROUP_COUNT = 4;
 const GROUP_LENGTH = 4;
 // Unambiguous alphabet — no 0/O or 1/I, easier to read aloud for support calls.
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const PREFIX = "POSHAK";
+const PREFIX = "PIXELCORE";
 
 function randomGroup(): string {
   const bytes = crypto.randomBytes(GROUP_LENGTH);
@@ -15,7 +15,7 @@ function randomGroup(): string {
   return group;
 }
 
-// Human-shareable entitlement key, e.g. POSHAK-7F3K-QW2M-8XZP-4NRT.
+// Human-shareable entitlement key, e.g. PIXELCORE-7F3K-QW2M-8XZP-4NRT.
 // This is a support/entitlement record shown in the buyer dashboard, not a
 // technically-enforced activation key — nothing in the delivered ZIP
 // (launcher, workflows) validates it programmatically today.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import {
   IconAlertTriangle,
@@ -9,7 +10,13 @@ import {
   IconBuildingStore,
   IconCheck,
 } from "@tabler/icons-react";
-import { PRICING } from "@/data/pricing";
+import { PRICING, SUPPORT_ADDON } from "@/data/pricing";
+
+// Live payment isn't wired up yet (PayPal is sandbox-only). Flip this back
+// to true once real PayPal credentials are live — the full checkout flow
+// below is untouched and ready to go, this just skips it for now in favor
+// of a plain lead-capture form that hands off to manual follow-up.
+const PAYMENTS_ENABLED = false;
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 const POLL_INTERVAL_MS = 3000;
@@ -124,7 +131,145 @@ function CheckoutForm({
   );
 }
 
-export default function PayPalCheckout() {
+// Interim flow while live payment isn't wired up: grants dashboard access
+// right away (see app/api/orders/interim-checkout) instead of waiting on a
+// PayPal capture, and notifies the team so payment — and support, if
+// requested — gets arranged manually. Goes straight to the dashboard for an
+// already-logged-in buyer; sends a not-yet-logged-in one to create an
+// account first, which claims the same order automatically on signup.
+function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [addSupport, setAddSupport] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const total = Number(PRICING.amount) + (addSupport ? Number(SUPPORT_ADDON.amount) : 0);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!EMAIL_RE.test(email)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/orders/interim-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, addSupport }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json();
+        setError(body.error ?? "Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    const destination = isLoggedIn ? "/dashboard/downloads" : "/signup?redirectTo=/dashboard/downloads";
+
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-default border border-success/30 bg-success-dim p-6 text-center">
+        <IconCheck size={20} className="text-success" />
+        <p className="text-[13.5px] text-text-muted">
+          You&apos;re in — the pipeline is unlocked in your dashboard.
+          {addSupport ? " Our support team will contact you shortly to get everything set up." : ""}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            router.push(destination);
+            router.refresh();
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-default bg-accent px-5 py-3 font-heading text-sm font-bold text-accent-foreground transition-opacity hover:opacity-90"
+        >
+          {isLoggedIn ? "Go to dashboard" : "Create your account"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <label className="flex flex-col gap-1.5">
+        <span className="font-mono text-[11px] uppercase tracking-wide text-text-dim">
+          Email *
+        </span>
+        <div className="flex items-center gap-2 rounded-default border border-border bg-surface-2 px-3.5 py-3">
+          <IconMail size={16} className="text-text-dim" />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@boutique.com"
+            className="w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-dim"
+          />
+        </div>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-default border border-accent/30 bg-accent-dim p-3.5">
+        <input
+          type="checkbox"
+          checked={addSupport}
+          onChange={(e) => setAddSupport(e.target.checked)}
+          className="mt-1 h-4 w-4 shrink-0 accent-accent"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-heading text-[13.5px] font-semibold text-text">
+            + {SUPPORT_ADDON.label} — ${SUPPORT_ADDON.amount.split(".")[0]}
+          </span>
+          <span className="text-[12.5px] leading-snug text-text-muted">
+            {SUPPORT_ADDON.description} Selecting this means our support team will contact you as
+            soon as possible after you continue.
+          </span>
+        </span>
+      </label>
+
+      <div className="flex items-center justify-between rounded-default border border-border bg-surface-2 px-3.5 py-3">
+        <span className="text-[13px] text-text-muted">Total</span>
+        <span className="font-mono text-lg text-text">
+          ${total.toFixed(2)} {PRICING.currency}
+        </span>
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="mt-1 inline-flex items-center justify-center gap-2 rounded-default bg-accent px-5 py-3.5 font-heading text-sm font-bold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
+        {submitting ? <IconLoader2 size={16} className="animate-spin" /> : null}
+        Continue
+      </button>
+
+      {error ? <ErrorBox message={error} /> : null}
+    </form>
+  );
+}
+
+export default function PayPalCheckout({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+  if (!PAYMENTS_ENABLED) {
+    return <LeadCaptureForm isLoggedIn={isLoggedIn} />;
+  }
+
+  return <PayPalCheckoutLive />;
+}
+
+function PayPalCheckoutLive() {
   const [state, setState] = useState<Stage>({ stage: "form" });
   const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 

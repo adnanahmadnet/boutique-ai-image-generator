@@ -21,7 +21,7 @@ type FormState =
 
 export default function PasswordAuthForm({
   mode,
-  redirectTo = "/",
+  redirectTo = "/dashboard",
   isConfigured = true,
 }: {
   mode: "login" | "signup";

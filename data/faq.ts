@@ -22,7 +22,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What does it cost to run after I buy it?",
     answer:
-      "You pay fal.ai directly per image generated (see the Models section on the Features page for current per-model pricing), plus whatever your n8n hosting plan costs if you're not self-hosting. There's no ongoing fee to us beyond the one-time purchase.",
+      "You pay fal.ai directly per generation (see the Models section on the Features page for current per-model pricing), plus whatever your n8n hosting plan costs if you're not self-hosting. There's no ongoing fee to us beyond the one-time purchase. Note that this is per generation attempt, not per guaranteed usable image — like any AI model, a result you don't like still costs the generation fee, and getting the exact shot you want may take more than one try.",
   },
   {
     question: "What happens right after I purchase?",

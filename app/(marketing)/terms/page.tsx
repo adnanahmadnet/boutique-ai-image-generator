@@ -6,7 +6,7 @@ import { PRICING } from "@/data/pricing";
 import { LEGAL } from "@/data/legal";
 
 export const metadata: Metadata = {
-  title: "Terms & Refund Policy — AI Image Generation Pipeline",
+  title: "Terms & Refund Policy — PixelCore Engine",
   description: "License terms, usage, and refund policy.",
 };
 

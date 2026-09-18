@@ -6,7 +6,7 @@ import GalleryGrid from "@/components/GalleryGrid";
 import { PROVENANCE_EXAMPLES } from "@/data/gallery";
 
 export const metadata: Metadata = {
-  title: "Screenshots & Demo Gallery — AI Image Generation Pipeline",
+  title: "Screenshots & Demo Gallery — PixelCore Engine",
   description:
     "Real before/after examples produced by the pipeline — flat product photography transformed into photorealistic on-model shots.",
 };

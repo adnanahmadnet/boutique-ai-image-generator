@@ -22,8 +22,8 @@ const STEPS = [
     width: 920,
     height: 886,
     alt: "The prompt builder showing dropdowns for model descriptor, top wear, bottom wear and footwear, above a long live prompt assigning each reference image a specific job",
-    label: "Write the prompt",
-    body: "This is where you describe the shot you want. Dropdowns cover the recurring choices — the model, the top wear, the bottom wear, the footwear — and the prompt itself is a full editor, so you can be as specific as the shot needs: which reference controls the pose, which one controls the face, which one controls the garment.",
+    label: "Full creative control over the prompt",
+    body: "Dropdowns cover the recurring choices — the model, the top wear, the bottom wear, the footwear — but the prompt itself is a full editor, not a locked template. You decide exactly what it says: which reference controls the pose, which one controls the face, which one controls the garment, right down to the wording. Nothing about the shot is fixed unless you fix it.",
   },
   {
     image: "/images/launcher-3-generate.jpg",

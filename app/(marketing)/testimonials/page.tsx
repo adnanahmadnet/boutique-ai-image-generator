@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Testimonials from "@/components/Testimonials";
 
 export const metadata: Metadata = {
-  title: "Testimonials — AI Image Generation Pipeline",
+  title: "Testimonials — PixelCore Engine",
   description: "What boutique owners say after switching to AI-generated product photography.",
 };
 

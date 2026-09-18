@@ -11,7 +11,7 @@ export interface ResourceFile {
 export const RESOURCE_FILES: ResourceFile[] = [
   {
     id: "launcher",
-    filename: "nano-banana-launcher.html",
+    filename: "Image Generation Launcher.html",
     label: "Operator console",
     description:
       "The front-end you and your team will actually use day to day — a single static HTML file, no install or server required.",
@@ -23,7 +23,7 @@ export const RESOURCE_FILES: ResourceFile[] = [
   },
   {
     id: "main-workflow",
-    filename: "Ai Image generation with Notion.json",
+    filename: "Ai Image generation workflow.json",
     label: "Main n8n workflow",
     description:
       "Intake webhook, model routing (Nano Banana Pro, FLUX.1 Kontext, GPT Image 2, Topaz Upscaler), Notion logging, and delivery.",
@@ -37,7 +37,7 @@ export const RESOURCE_FILES: ResourceFile[] = [
   },
   {
     id: "error-workflow",
-    filename: "AI image generation Error Logs.json",
+    filename: "Error Logs Workflow.json",
     label: "Error-handling workflow",
     description:
       "A second, independent workflow that watches for crashed runs and marks them Error in Notion instead of leaving them stuck at Processing forever.",
@@ -49,7 +49,7 @@ export const RESOURCE_FILES: ResourceFile[] = [
   },
   {
     id: "notion-template",
-    filename: "AI Image Genaration Logs for Notion.csv",
+    filename: "Notion Logs Database.csv",
     label: "Notion database template",
     description:
       "A ready-to-import template with every column the workflows expect (Model, Prompt, Status, timings, output links, and more).",
@@ -61,8 +61,8 @@ export const RESOURCE_FILES: ResourceFile[] = [
     ],
   },
   {
-    id: "readme",
-    filename: "README.md",
+    id: "setup-guide",
+    filename: "Setup Guide.md",
     label: "Setup guide",
     description:
       "The full written walkthrough — prerequisites, installation steps, usage, and troubleshooting for the whole pipeline.",

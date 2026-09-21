@@ -152,6 +152,15 @@ files in `public.schema_migrations`, one transaction per file):
 ```
 node db/migrate.mjs
 ```
+**The paid download zip is stored in `public.deliverables`** (migration
+0008), not shipped with the deploy — `private/downloads/*` is git-ignored on
+purpose, so it doesn't exist on Vercel. `/api/download` reads it from the DB
+(falling back to the local file in dev). After changing the zip, re-run
+`node db/upload-deliverable.mjs`. Download links from the dashboard are
+relative (`/api/download?token=…`); `getSiteUrl()` (emails/webhooks) falls
+back to the Vercel production domain if `NEXT_PUBLIC_SITE_URL` is missing
+or localhost.
+
 `0007_enable_rls.sql` turns on RLS for every table because Supabase exposes
 `public` through its REST API; the app's `postgres` role bypasses it. **Any
 new table needs `enable row level security` in its migration.**

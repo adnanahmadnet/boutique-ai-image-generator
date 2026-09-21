@@ -3,7 +3,6 @@ import { isDatabaseConfigured, queryOne } from "@/lib/db";
 import { getCurrentUser } from "@/lib/get-current-user";
 import { createDownloadGrant } from "@/lib/download-token";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getSiteUrl } from "@/lib/site-url";
 
 // Authenticated. Backs the "Get a new download link" button on
 // /dashboard/downloads once the original 30-minute link has expired.
@@ -70,7 +69,10 @@ export async function POST(request: NextRequest) {
   try {
     const grant = await createDownloadGrant(order.id, license.id);
     return NextResponse.json({
-      downloadUrl: `${getSiteUrl()}/api/download?token=${grant.token}`,
+      // Relative on purpose: the dashboard button is clicked in the buyer's
+      // own browser, so a same-origin link works on any domain (localhost,
+      // preview deploys, production) regardless of NEXT_PUBLIC_SITE_URL.
+      downloadUrl: `/api/download?token=${grant.token}`,
       expiresAt: grant.expiresAt.toISOString(),
     });
   } catch (error) {

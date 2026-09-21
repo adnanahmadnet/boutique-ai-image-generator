@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { verifyDownloadToken, markGrantConsumed } from "@/lib/download-token";
-import { isDatabaseConfigured } from "@/lib/db";
+import { isDatabaseConfigured, queryOne } from "@/lib/db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const DELIVERABLE_PATH = path.join(
@@ -44,7 +44,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const file = await readFile(DELIVERABLE_PATH);
+    // The zip lives in public.deliverables in production (the file on disk is
+    // git-ignored, so it isn't part of a Vercel deploy). Fall back to the
+    // local file so dev works before/without an upload.
+    const row = await queryOne<{ content: Buffer }>(
+      `select content from public.deliverables where name = $1`,
+      [DELIVERABLE_FILENAME]
+    );
+    const file = row?.content ?? (await readFile(DELIVERABLE_PATH));
     await markGrantConsumed(validation.grantId).catch(() => {
       // Non-critical bookkeeping — never block the download over it.
     });

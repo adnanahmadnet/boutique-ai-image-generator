@@ -103,10 +103,14 @@ for per-request memoization):
   the form — deliberately ignoring `redirectTo` in that case to avoid a
   redirect loop (a buyer hitting `/login?redirectTo=/admin` would otherwise
   bounce back here forever).
-- **Guest checkout**: an order can have `buyer_id = null` (matched by
-  `buyer_email`) until the buyer creates an account. `lib/auth-claim.ts`'s
-  `claimGuestOrders(userId, email)` runs on every successful login/signup
-  and links any matching guest orders/licenses to the new `buyer_id`.
+- **Checkout requires a logged-in buyer** (interim checkout and the dormant
+  PayPal `create-order` both return 401 `{loginRequired: true}` otherwise;
+  the order always uses the account's own email/`buyer_id`, never a typed
+  one). The pricing page sends a logged-out visitor to
+  `/login?redirectTo=/pricing`. Guest orders (`buyer_id = null`, matched by
+  `buyer_email`) can no longer be created, but `lib/auth-claim.ts`'s
+  `claimGuestOrders(userId, email)` still runs on login/signup to link any
+  pre-existing ones.
 
 ## Payment status — read this before touching checkout
 
@@ -211,10 +215,10 @@ except where noted):
 - Nav: Home / Features / Gallery / Pricing / FAQ. Contact is footer-only,
   not in the top nav (never explicitly asked to add it there).
 - Pricing page: $30 base + $20 support-add-on checkbox with live total,
-  "Continue" → interim-checkout → success message (mentions "our support
-  team will contact you shortly" only if the add-on was checked) → "Go to
-  dashboard" (if already logged in) or "Create your account" (redirects
-  through signup, guest order auto-claims on that signup).
+  "Continue" → (logged out: redirected to `/login?redirectTo=/pricing`;
+  the login page's "Create an account" link keeps the redirect) → logged in:
+  interim-checkout → success message (mentions "our support team will
+  contact you shortly" only if the add-on was checked) → "Go to dashboard".
 - Signup form: name, **phone (required)**, boutique name (optional), email,
   password. Phone is stored in `profiles.phone` specifically so the support
   team can actually call a buyer, not just email them.

@@ -6,18 +6,24 @@ import { generateLicenseKey } from "@/lib/license";
 import { sendContactNotificationEmail } from "@/lib/email";
 import { PRICING, SUPPORT_ADDON } from "@/data/pricing";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 // Stand-in for real payment while live PayPal isn't wired up (see
 // PAYMENTS_ENABLED in components/PayPalCheckout.tsx): grants dashboard
 // access immediately instead of waiting on a capture, and emails the team so
-// payment (and support, if requested) gets arranged manually. If the buyer
-// isn't logged in yet, the order is created as a guest order (buyer_id null,
-// matched by email) and picked up automatically by claimGuestOrders on their
-// next signup/login. Delete this route once PAYMENTS_ENABLED is back on.
+// payment (and support, if requested) gets arranged manually. Requires a
+// logged-in buyer — the order is always attached to their account, and the
+// email used is the account's, never one typed into the form. Delete this
+// route once PAYMENTS_ENABLED is back on.
 export async function POST(request: NextRequest) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json({ error: "Checkout isn't configured yet." }, { status: 503 });
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json(
+      { error: "Please log in to continue.", loginRequired: true },
+      { status: 401 }
+    );
   }
 
   const rateLimit = await checkRateLimit(`interim-checkout:${getClientIp(request)}`, {
@@ -28,20 +34,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
   }
 
-  let body: { email?: string; addSupport?: boolean };
+  let body: { addSupport?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const user = await getCurrentUser();
-  const email = user?.email ?? body.email?.trim();
+  const email = user.email;
   const addSupport = Boolean(body.addSupport);
-
-  if (!email || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "A valid email address is required." }, { status: 400 });
-  }
 
   const amount = (
     Number(PRICING.amount) + (addSupport ? Number(SUPPORT_ADDON.amount) : 0)
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
          (buyer_id, buyer_email, amount, currency, status, completed_at, includes_support)
        values ($1, $2, $3, $4, 'completed', now(), $5)
        returning id`,
-      [user?.id ?? null, email, amount, PRICING.currency, addSupport]
+      [user.id, email, amount, PRICING.currency, addSupport]
     );
 
     if (!order) {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     await query(
       `insert into public.licenses (order_id, buyer_id, license_key)
        values ($1, $2, $3)`,
-      [order.id, user?.id ?? null, licenseKey]
+      [order.id, user.id, licenseKey]
     );
 
     // Feeds the support-team dashboard (/support): one request per order
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       await query(
         `insert into public.support_requests (order_id, buyer_id, buyer_email)
          values ($1, $2, $3)`,
-        [order.id, user?.id ?? null, email]
+        [order.id, user.id, email]
       );
     }
 

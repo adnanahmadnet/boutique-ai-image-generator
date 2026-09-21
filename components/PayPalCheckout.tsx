@@ -31,6 +31,10 @@ type Stage =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Payment needs a logged-in buyer (enforced server-side too). After logging
+// in or signing up, the buyer lands back on the pricing page to continue.
+const LOGIN_URL = "/login?redirectTo=%2Fpricing";
+
 function ErrorBox({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-default border border-danger/30 bg-danger-dim p-3 text-[13px] text-danger">
@@ -45,6 +49,7 @@ function CheckoutForm({
 }: {
   onCreated: (paypalOrderId: string, orderId: string) => void;
 }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [boutiqueName, setBoutiqueName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +73,11 @@ function CheckoutForm({
         body: JSON.stringify({ email, boutiqueName }),
       });
       const body = await res.json();
+
+      if (res.status === 401) {
+        router.push(LOGIN_URL);
+        return;
+      }
 
       if (!res.ok) {
         setError(body.error ?? "Unable to start checkout.");
@@ -134,9 +144,9 @@ function CheckoutForm({
 // Interim flow while live payment isn't wired up: grants dashboard access
 // right away (see app/api/orders/interim-checkout) instead of waiting on a
 // PayPal capture, and notifies the team so payment — and support, if
-// requested — gets arranged manually. Goes straight to the dashboard for an
-// already-logged-in buyer; sends a not-yet-logged-in one to create an
-// account first, which claims the same order automatically on signup.
+// requested — gets arranged manually. Requires a logged-in buyer: a visitor
+// who isn't logged in is sent to the login page (and back here afterwards)
+// instead of an order being created.
 function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -155,6 +165,11 @@ function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
       return;
     }
 
+    if (!isLoggedIn) {
+      router.push(LOGIN_URL);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -162,8 +177,14 @@ function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
       const res = await fetch("/api/orders/interim-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, addSupport }),
+        body: JSON.stringify({ addSupport }),
       });
+
+      // Session expired since the page loaded — same outcome as logged out.
+      if (res.status === 401) {
+        router.push(LOGIN_URL);
+        return;
+      }
 
       if (!res.ok) {
         const body = await res.json();
@@ -180,8 +201,6 @@ function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
   };
 
   if (submitted) {
-    const destination = isLoggedIn ? "/dashboard/downloads" : "/signup?redirectTo=/dashboard/downloads";
-
     return (
       <div className="flex flex-col items-center gap-3 rounded-default border border-success/30 bg-success-dim p-6 text-center">
         <IconCheck size={20} className="text-success" />
@@ -192,12 +211,12 @@ function LeadCaptureForm({ isLoggedIn }: { isLoggedIn: boolean }) {
         <button
           type="button"
           onClick={() => {
-            router.push(destination);
+            router.push("/dashboard/downloads");
             router.refresh();
           }}
           className="inline-flex items-center justify-center gap-2 rounded-default bg-accent px-5 py-3 font-heading text-sm font-bold text-accent-foreground transition-opacity hover:opacity-90"
         >
-          {isLoggedIn ? "Go to dashboard" : "Create your account"}
+          Go to dashboard
         </button>
       </div>
     );

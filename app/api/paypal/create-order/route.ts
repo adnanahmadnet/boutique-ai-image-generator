@@ -5,13 +5,20 @@ import { getCurrentUser } from "@/lib/get-current-user";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { PRICING } from "@/data/pricing";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export async function POST(request: NextRequest) {
   if (!isDatabaseConfigured()) {
     return NextResponse.json(
       { error: "Checkout isn't configured yet. Please try again later." },
       { status: 503 }
+    );
+  }
+
+  // Payment requires a logged-in buyer (same rule as the interim checkout).
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json(
+      { error: "Please log in to continue.", loginRequired: true },
+      { status: 401 }
     );
   }
 
@@ -23,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
   }
 
-  let body: { email?: string; boutiqueName?: string };
+  let body: { boutiqueName?: string };
   try {
     body = await request.json();
   } catch {
@@ -32,21 +39,15 @@ export async function POST(request: NextRequest) {
 
   const boutiqueName = body.boutiqueName?.trim();
 
-  // A signed-in buyer's own email is authoritative — attach buyer_id directly
-  // so this order never needs the guest-checkout claim step on next login.
-  const user = await getCurrentUser();
-  const email = user?.email ?? body.email?.trim();
-
-  if (!email || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "A valid email address is required." }, { status: 400 });
-  }
+  // The buyer's own account email is authoritative; buyer_id is always set.
+  const email = user.email;
 
   try {
     const orderRow = await queryOne<{ id: string }>(
       `insert into public.orders (buyer_id, buyer_email, boutique_name, amount, currency, status)
        values ($1, $2, $3, $4, $5, 'pending')
        returning id`,
-      [user?.id ?? null, email, boutiqueName || null, PRICING.amount, PRICING.currency]
+      [user.id, email, boutiqueName || null, PRICING.amount, PRICING.currency]
     );
 
     if (!orderRow) {

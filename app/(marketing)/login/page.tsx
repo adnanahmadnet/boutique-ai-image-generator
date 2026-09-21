@@ -46,7 +46,10 @@ export default async function LoginPage({
           />
           <p className="mt-4 text-center text-[13px] text-text-muted">
             New here?{" "}
-            <Link href="/signup" className="text-accent hover:opacity-80">
+            <Link
+              href={redirectTo ? `/signup?redirectTo=${encodeURIComponent(redirectTo)}` : "/signup"}
+              className="text-accent hover:opacity-80"
+            >
               Create an account
             </Link>
           </p>

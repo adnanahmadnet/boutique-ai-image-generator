@@ -134,10 +134,27 @@ was resolved this session.
 
 ## Database — full table list and migration order
 
-Apply migrations **in order**, e.g.:
+**The database is hosted on Supabase** (project ref `kytqoiatltcjieukxzim`,
+region ap-northeast-2), reached as plain Postgres through `DATABASE_URL` —
+no Supabase client library or auth is used. It **must be a pooler string**
+(`postgres.<ref>@aws-0-<region>.pooler.supabase.com`), and the **Transaction
+pooler (port 6543) is the right one for the app** — Session mode (5432) caps
+at 15 clients total and hit `EMAXCONNSESSION` once. The app only uses plain
+`pool.query()` (no named prepared statements/advisory locks), so
+transaction mode is safe. The "Direct connection" host is IPv6-only and
+fails from Vercel and most IPv4 networks. `lib/db.ts` enables SSL for any
+non-localhost host, caches the pool on `globalThis` (dev HMR would otherwise
+leak pools) and caps it at `max: 3`. The same `DATABASE_URL` must be set in
+Vercel's env vars for the deployed site.
+
+Apply migrations **in order** with the runner (idempotent — tracks applied
+files in `public.schema_migrations`, one transaction per file):
 ```
-psql -U boutique_ai_app -h localhost -d boutique_ai -f db/migrations/000N_name.sql
+node db/migrate.mjs
 ```
+`0007_enable_rls.sql` turns on RLS for every table because Supabase exposes
+`public` through its REST API; the app's `postgres` role bypasses it. **Any
+new table needs `enable row level security` in its migration.**
 
 | Migration | What it does |
 |---|---|

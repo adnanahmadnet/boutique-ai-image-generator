@@ -1,22 +1,35 @@
 import { Pool, type QueryResultRow } from "pg";
 
-let pool: Pool | null = null;
+// Kept on globalThis so Next.js dev hot reloads reuse one pool instead of
+// orphaning a new one (each holding open connections) on every module reload.
+const globalForPool = globalThis as unknown as { __pgPool?: Pool };
 
 export function isDatabaseConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
 
 function getPool(): Pool {
-  if (!pool) {
+  if (!globalForPool.__pgPool) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error(
-        "Missing DATABASE_URL. Copy .env.example to .env.local and fill in your local Postgres connection string."
+        "Missing DATABASE_URL. Copy .env.example to .env.local and fill in your Supabase (Session/Transaction pooler) connection string."
       );
     }
-    pool = new Pool({ connectionString });
+    // Hosted Postgres (Supabase) requires SSL; a local dev database doesn't.
+    const host = new URL(connectionString).hostname;
+    const isLocal = host === "localhost" || host === "127.0.0.1";
+    globalForPool.__pgPool = new Pool({
+      connectionString,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+      // Supabase's pooler caps total clients (15 in session mode), and every
+      // serverless instance gets its own pool — keep each one small and let
+      // idle connections go quickly.
+      max: 3,
+      idleTimeoutMillis: 10_000,
+    });
   }
-  return pool;
+  return globalForPool.__pgPool;
 }
 
 // Runs a query and returns every matching row.

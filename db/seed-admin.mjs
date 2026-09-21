@@ -61,7 +61,13 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: DATABASE_URL });
+  // Mirrors lib/db.ts: hosted Postgres (Supabase) needs SSL, localhost doesn't.
+  const host = new URL(DATABASE_URL).hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  const pool = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: isLocal ? undefined : { rejectUnauthorized: false },
+  });
 
   try {
     const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, SALT_ROUNDS);
